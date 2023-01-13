@@ -129,5 +129,31 @@ plt.scatter(x1**2,x2**2)
 # %%
 plt.scatter(x1+np.random.randn(len(x1))/2, x2+np.random.randn(len(x2))/2)
 # %%
-def create_diamond_df(n, radius1, radius2, std1, std2):
-    outer_diamond = 
+# def create_diamond_df(n, radius1, radius2, std1, std2):
+#     outer_diamond = 
+
+
+
+
+#%%
+# (x1-h)**2 + (x2-k)**2 = r**2
+h = 0
+k = 0
+r = 3
+gap = 0.01
+
+# x1 = np.tile(np.arange(-r, r+gap, gap),2)
+x1 = np.arange(-r,r+gap,gap)
+x2 = np.concatenate([np.sqrt(r**2 - (x1-h)**2), -1*np.sqrt(r**2 - (x1-h)**2)])
+
+# %%
+fig = plt.figure()
+ax = fig.add_subplot()
+ax.set_aspect('equal', adjustable='box')
+plt.scatter(np.tile(x1,2) + np.random.rand(len(x2))/4,x2 + np.random.randn(len(x2))/4)
+# %%
+fig = plt.figure()
+ax = fig.add_subplot()
+ax.set_aspect('equal', adjustable='box')
+plt.scatter(np.tile(x1,2), x2)
+# %%
