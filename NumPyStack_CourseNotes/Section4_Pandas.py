@@ -83,9 +83,9 @@ scatter_matrix(df[['open', 'high', 'low', 'close']],
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-n = 10
+n = 10000
 rad1 = np.sqrt(10)
-rad2 = np.sqrt(5)
+rad2 = np.sqrt(1)
 beyond = 5
 
 # x2 = np.random.random(n) * 15 - 7.5
@@ -93,26 +93,41 @@ beyond = 5
 # print(x1.mean())
 # print(x2)
 
+
+# %%
 def create_df(n, radius, radius2, beyond, beyond2):
-    outer_circle = np.random.random(2*n) * (radius*2+beyond) - (radius+beyond/2)
-    inner_circle = np.random.random(n) * (radius*2+beyond) - (radius+beyond/2)
-    y = np.array(np.zeros(n))
-    # return {'x1': outer_circle[:int(n/2)], 
-    #         'x2': outer_circle[int(n/2):]}
-    return pd.DataFrame(data = {'x1': outer_circle[:int(n)], 
-                                'x2': outer_circle[int(n):],
-                                'y': y})
+    outer_circle = np.random.randn(2*n) * (radius*2+beyond) - (radius+beyond/2)
+    inner_circle = np.random.randn(2*n) * (radius2*2+beyond2) - (radius2+beyond2/2)
+    y = np.concatenate([np.zeros(n), np.ones(n)])
+    
+    dat = pd.DataFrame(data = {'x1': np.concatenate([outer_circle[:int(n)], inner_circle[:int(n)]]), 
+                               'x2': np.concatenate([outer_circle[int(n):], inner_circle[int(n):]])})
+    return dat.assign(
+                    x1_2 = lambda x: x['x1']**2,
+                    x2_2 = lambda x: x['x2']**2,
+                    x1_x2 = lambda x: x['x1']*x['x2'],
+                    y = y
+                    )
 
 df = create_df(n, rad1, rad2, beyond, beyond)
 
+# print(df)
+# %%
+print(df.groupby("y").mean())
+df.groupby("y").agg(['mean', 'std'])
+# %%
+plt.scatter(np.sign(df['x1'])*df['x1_2'], np.sign(df['x2'])*df['x2_2'], c=df['y'])
+# %%
+x1 = np.repeat(np.arange(-10, 10.5, 0.5), 2)
+x2 = np.repeat(np.concatenate([np.arange(0, 10.5, 0.5), np.arange(0, 10, 0.5)[::-1]]),2) * np.tile(np.array([-1,1]), int(len(x1)/2))
 
-
-
-# x1_2 = x1**2
-# x1_2
-# pd.DataFrame()
-# plt.scatter(x1_2[:n/2], x1_2[n/2:])
-
-
+print(x1)
+print(x2)
+# %%
+plt.scatter(x1**2,x2**2)
 
 # %%
+plt.scatter(x1+np.random.randn(len(x1))/2, x2+np.random.randn(len(x2))/2)
+# %%
+def create_diamond_df(n, radius1, radius2, std1, std2):
+    outer_diamond = 
