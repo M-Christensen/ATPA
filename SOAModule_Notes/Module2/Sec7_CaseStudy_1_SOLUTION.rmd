@@ -1,0 +1,93 @@
+---
+title: "Module 2 Section 7 Case Study 1"
+---
+
+```{r}
+library(reticulate)
+```
+
+Read in data
+```{python}
+import pandas as pd
+
+# requires the "openpyxl" package installed, does not need to be loaded
+site_visits = pd.read_csv("tracking.csv")
+site_daily_1 = pd.read_excel("site_daily.xlsx", sheet_name = 1)
+site_daily_2 = pd.read_excel("site_daily.xlsx", sheet_name = 2)
+```
+
+Filter by first time visits
+Find the number of visits and the average duration per visit by day
+Make a histogram of the average duration
+```{python}
+import matplotlib.pyplot as plt
+
+by_day = site_visits.query("Previous == 0").groupby("Day").agg({"Duration":"mean","Day":"count"}).rename(columns={"Duration":"mean_duration","Day":"num_visits"})
+# The Day variable becomes the index of the aggregated data frame. Use this to make it part of the data frame as well
+by_day["Day"] = by_day.index
+pd.set_option('display.max_rows', None)
+by_day
+
+plt.hist(by_day.mean_duration)
+plt.xlabel("Average Duration")
+plt.ylabel("Count")
+plt.title("Average Duration of Site Visit by Day")
+plt.show()
+plt.close()
+
+```
+
+Combine the data sets
+```{python}
+import datetime as dt
+site_data_combined  = pd.concat([site_daily_1, site_daily_2],axis=0)
+by_day_2 = by_day.rename(columns={"Day":"date"})
+by_day_2.date = pd.to_datetime(by_day_2.date)
+site_all = site_data_combined.merge(by_day_2, on = "date",how="inner")
+pd.set_option('display.max_columns', None)
+site_all
+```
+
+Fix the headliner_topic variable
+```{python}
+
+site_all.headliner_topic = [str.lower() for str in site_all.headliner_topic]
+site_all.headliner_topic[site_all.headliner_topic == "ml"] = "machine learning"
+
+site_all.headliner_topic.value_counts()
+```
+
+Fix outlier in num_ads
+```{python}
+plt.hist(site_all.num_ads)
+plt.show()
+plt.close()
+
+site_all_2 = site_all.query("num_ads < 70")
+plt.hist(site_all_2.num_ads)
+plt.show()
+plt.close()
+```
+
+Missing values in news, use regression to impute the values
+```{python}
+from autoimpute.imputations import MultipleImputer
+
+new_site = pd.get_dummies(site_all_2.drop(columns=["mean_duration","date"]),drop_first=True)
+imp = MultipleImputer(return_list=True,n=1,strategy={"news":'binary logistic'})
+site_imputed = imp.fit_transform(new_site)[0][1]
+site_all_2.news = site_imputed.news
+site_all_2
+```
+
+Create weekday variable and change character variables to factors
+```{python}
+site_all_2["day_of_week"] = [curdate.strftime("%A") for curdate in site_all_2.date]
+site_all_2.headliner_topic = pd.Categorical(site_all_2.headliner_topic)
+site_all_2.day_of_week = pd.Categorical(site_all_2.day_of_week)
+site_all_2 = site_all_2.drop(columns=["date"])
+site_all_2
+site_all_2.describe()
+site_all_2.describe(include="category")
+
+```

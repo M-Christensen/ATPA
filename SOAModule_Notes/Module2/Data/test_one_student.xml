@@ -1,0 +1,26 @@
+<Test_Results>
+  <Candidate>
+    <Name>Steven</Name>
+    <ID>07309198</ID>
+    <Scores>
+      <Question bank="78">
+        <Number>1</Number>
+        <Correct>A</Correct>
+        <Answered>A</Answered>
+        <Points>1</Points>
+      </Question>  
+      <Question bank="42">
+        <Number>2</Number>
+        <Correct>C</Correct>
+        <Answered>C</Answered>
+        <Points>1</Points>
+      </Question> 
+      <Question bank="59">
+        <Number>3</Number>
+        <Correct>C</Correct>
+        <Answered>D</Answered>
+        <Points>0</Points>
+      </Question> 
+    </Scores>
+  </Candidate>
+</Test_Results>
