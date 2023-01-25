@@ -1,0 +1,93 @@
+---
+title: "Module 2 Section 7 Case Study 2"
+
+---
+
+```{r}
+library(reticulate)
+```
+
+Read in questionnaire data
+```{python}
+import pandas as pd
+chiro = pd.read_csv("questionnaire.csv")
+```
+
+Read in visits data, extract variables, and create data frame
+```{python}
+visits = pd.read_xml("visits.xml",parser="etree",xpath=".//visit")
+
+```
+
+Validate the year variable
+```{python}
+visits_year = visits.groupby("ID",as_index=False).agg({"year":"min"}).rename(columns = {"year":"first_visit"})
+
+# using as_index=FALSE makes the ID variable appear in the resulting data frame
+quest_year = chiro.loc[:,["ID","year"]]
+validate = visits_year.merge(quest_year,on="ID",how="inner")
+sum(validate.year != validate.first_visit)
+```
+
+Aggregate the visits data, count the number of visits in 2018
+```{python}
+import matplotlib.pyplot as plt
+
+counts_2018 = pd.DataFrame(visits.query("year == 2018").groupby("ID").size(),columns = ["counts_2018"])
+counts_2018
+
+plt.hist(counts_2018.counts_2018)
+plt.xlabel("Visits")
+plt.ylabel("Count")
+plt.title("Number of Chiropractic Visits in 2018")
+plt.show()
+plt.close()
+```
+
+Aggregate the visits data for 2017 for predictor variables
+```{python}
+counts_2017 = pd.DataFrame(visits.query("year == 2017").groupby("ID").size(),columns = ["count_2017"])
+visits["type_extended"] = (visits.type=="extended")
+visits["reschedule_yes"] = (visits.reschedule == "yes")
+agg_2017 = visits.query("year == 2017").groupby("ID").agg({"type_extended":"mean", "reschedule_yes":"mean"})
+visits_all = agg_2017.merge(counts_2017,on="ID",how="inner").merge(counts_2018,on="ID",how="inner")
+visits_all
+```
+
+Create the variables for the causes
+```{python}
+chiro["pain"] = chiro.why_visit.str.contains("pain")
+chiro["stiffness"] = chiro.why_visit.str.contains("stiffness")
+chiro["recovery"] = chiro.why_visit.str.contains("recovery")
+chiro["functionality"] = chiro.why_visit.str.contains("functionality")
+chiro2 = chiro.drop(columns = ["why_visit"])
+```
+
+Fix missing values in past_surgery
+```{python}
+
+pd.crosstab(chiro2.past_surgery,chiro2.year, dropna = False)
+chiro2 = chiro2.drop(columns=["past_surgery"])
+```
+
+Lump small factor levels of how_know together
+```{python}
+small_levels = ["business card","doctor referral","news article","shopping cart ad","television ad","youtube ad"]
+mask = chiro2.how_know.isin(small_levels)
+chiro2.how_know[mask] = "Other"
+pd.crosstab(index=chiro2['how_know'], columns='count')
+```
+
+Combine the visits and questionnaire data together
+```{python}
+chiro_final = chiro2.merge(visits_all,on="ID",how="inner")
+pd.set_option('display.max_columns', None)
+chiro_final.describe(include = "all")
+```
+
+
+
+
+
+
+

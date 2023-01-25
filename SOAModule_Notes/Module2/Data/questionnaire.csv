@@ -1,0 +1,341 @@
+ID,year,age,sex,why_visit,past_surgery,arthritis,how_know
+693827,2018,34,Male,recovery,no,1,radio ad
+660782,2018,38,Male,pain and stiffness,no,0,internet search
+645582,2017,59,Female,"pain, stiffness, and recovery",no,0,referral
+695525,2017,39,Male,pain and functionality,no,0,referral
+660100,2017,40,Male,pain and stiffness,no,0,radio ad
+645679,2016,38,Male,stiffness,no,0,radio ad
+688100,2018,28,Other,functionality,no,0,radio ad
+650988,2016,40,Male,"pain, stiffness, and functionality",no,1,internet search
+691349,2018,37,Female,pain and stiffness,no,0,saw store
+675772,2018,43,Male,pain and stiffness,no,0,internet search
+681745,2018,53,Male,stiffness and functionality,no,0,saw store
+684763,2017,58,Female,stiffness and functionality,yes,0,radio ad
+652839,2016,34,Male,pain,no,1,saw store
+654724,2017,60,Female,pain and stiffness,no,1,youtube ad
+693035,2017,27,Female,pain and recovery,no,0,radio ad
+675141,2018,38,Male,pain and functionality,no,0,referral
+661514,2016,36,Female,"pain, recovery, and functionality",no,0,referral
+654302,2018,60,Female,pain and stiffness,no,1,internet search
+697913,2016,55,Male,pain and recovery,no,0,internet search
+631127,2015,38,Male,functionality,NA,0,internet search
+670243,2018,46,Male,pain and functionality,no,0,referral
+666847,2017,30,Female,stiffness,no,0,referral
+641232,2018,22,Male,"pain, stiffness, recovery, and functionality",no,0,saw store
+669030,2017,51,Female,stiffness,no,0,internet search
+653679,2017,48,Male,recovery,no,0,radio ad
+633655,2018,60,Female,recovery and functionality,no,0,referral
+664632,2018,58,Male,recovery,no,0,radio ad
+669268,2018,42,Male,"pain, stiffness, recovery, and functionality",no,0,internet search
+655780,2018,46,Female,pain and stiffness,no,0,radio ad
+639651,2018,30,Male,stiffness and functionality,no,0,saw store
+668625,2016,24,Female,"pain, stiffness, recovery, and functionality",no,1,internet search
+638550,2015,28,Female,pain and stiffness,NA,0,youtube ad
+697137,2016,41,Male,pain and functionality,no,0,radio ad
+688045,2018,32,Female,pain and functionality,no,0,internet search
+694682,2018,42,Male,stiffness and functionality,no,1,referral
+638214,2017,60,Female,pain and functionality,no,1,internet search
+690017,2018,38,Female,"pain, recovery, and functionality",no,0,internet search
+635274,2018,36,Female,stiffness and functionality,no,1,saw store
+641852,2015,32,Female,"pain, stiffness, recovery, and functionality",NA,0,radio ad
+633864,2016,34,Male,"stiffness, recovery, and functionality",no,0,referral
+690524,2017,53,Male,pain and recovery,no,0,referral
+637930,2017,59,Male,"pain, recovery, and functionality",no,0,referral
+647403,2018,52,Female,pain and recovery,no,1,referral
+656308,2017,53,Female,"stiffness, recovery, and functionality",yes,1,internet search
+687645,2017,36,Female,pain and functionality,no,0,radio ad
+651735,2016,22,Female,"pain, stiffness, recovery, and functionality",no,0,referral
+683962,2017,37,Female,pain and recovery,no,0,radio ad
+690414,2017,47,Male,functionality,no,0,radio ad
+657529,2016,33,Male,recovery and functionality,no,0,radio ad
+636823,2018,58,Male,stiffness and functionality,no,0,saw store
+676633,2018,35,Female,stiffness and functionality,no,0,youtube ad
+675951,2015,25,Male,recovery and functionality,NA,0,referral
+698588,2018,55,Female,"pain, stiffness, and functionality",no,0,radio ad
+673924,2018,37,Male,recovery and functionality,no,0,referral
+672998,2018,54,Female,functionality,no,0,radio ad
+639664,2017,51,Female,pain,no,1,internet search
+647451,2017,37,Male,stiffness and recovery,no,1,referral
+682371,2017,29,Male,"stiffness, recovery, and functionality",no,0,radio ad
+651564,2017,60,Male,stiffness and functionality,no,0,referral
+691117,2018,39,Female,recovery,no,0,referral
+678718,2018,47,Male,pain and recovery,no,0,radio ad
+635285,2017,38,Female,functionality,no,1,referral
+641711,2018,39,Female,"pain, recovery, and functionality",no,0,referral
+635374,2018,30,Female,pain and functionality,no,1,internet search
+659150,2017,43,Female,pain and stiffness,no,1,internet search
+637697,2017,21,Male,"pain, stiffness, and recovery",no,0,radio ad
+674483,2017,56,Male,stiffness and recovery,no,1,referral
+676100,2016,26,Male,stiffness,no,0,saw store
+673882,2016,30,Male,"pain, stiffness, recovery, and functionality",no,0,referral
+644605,2018,54,Male,functionality,no,0,radio ad
+671922,2018,34,Male,recovery,no,0,referral
+691037,2016,52,Male,"pain, stiffness, and functionality",no,1,internet search
+651919,2018,51,Female,pain and recovery,no,1,radio ad
+682331,2018,45,Female,recovery and functionality,no,1,referral
+675902,2018,24,Female,stiffness and functionality,no,0,radio ad
+643888,2018,25,Female,recovery,no,0,news article
+648691,2018,42,Male,pain,no,1,referral
+687261,2018,30,Female,pain and stiffness,no,0,internet search
+685264,2018,30,Female,"pain, recovery, and functionality",no,0,radio ad
+697771,2015,38,Female,"pain, stiffness, and functionality",NA,0,referral
+653149,2018,48,Male,recovery and functionality,no,0,radio ad
+684882,2015,57,Female,recovery and functionality,NA,0,internet search
+661466,2018,56,Male,"stiffness, recovery, and functionality",no,1,radio ad
+638410,2017,58,Male,"stiffness, recovery, and functionality",no,0,radio ad
+697886,2016,53,Female,stiffness and functionality,no,0,internet search
+680019,2017,50,Male,recovery,no,1,saw store
+670765,2017,35,Male,pain and recovery,no,0,internet search
+636269,2015,28,Male,recovery and functionality,NA,0,youtube ad
+644502,2018,25,Female,pain and functionality,no,1,saw store
+630918,2018,24,Male,"pain, recovery, and functionality",no,1,saw store
+638110,2018,29,Male,recovery,no,0,internet search
+660679,2018,43,Male,recovery and functionality,no,0,radio ad
+679397,2018,34,Male,stiffness and functionality,no,0,referral
+667238,2018,50,Male,"pain, recovery, and functionality",no,0,doctor referral
+660182,2018,45,Female,pain and stiffness,no,0,news article
+663365,2018,36,Female,pain and stiffness,no,1,news article
+683611,2017,33,Male,"pain, recovery, and functionality",no,0,internet search
+660014,2016,53,Female,pain,no,0,referral
+657907,2016,44,Male,pain and stiffness,no,1,referral
+659083,2015,32,Male,"pain, stiffness, and recovery",NA,1,internet search
+667144,2016,51,Female,pain and functionality,no,1,radio ad
+687820,2016,32,Male,"stiffness, recovery, and functionality",no,0,radio ad
+663087,2016,60,Female,recovery,no,0,referral
+689745,2017,43,Male,stiffness and recovery,no,0,youtube ad
+649380,2015,31,Male,stiffness and functionality,NA,0,news article
+667325,2018,43,Female,pain and stiffness,no,0,internet search
+630902,2016,50,Male,"pain, stiffness, recovery, and functionality",no,1,referral
+635811,2018,53,Male,pain and functionality,no,1,internet search
+645429,2018,23,Male,pain and recovery,no,0,saw store
+672375,2017,57,Female,"pain, stiffness, recovery, and functionality",no,0,referral
+632791,2016,37,Female,pain and stiffness,no,0,radio ad
+653986,2017,33,Female,stiffness and functionality,no,0,radio ad
+680564,2016,55,Female,stiffness and functionality,yes,0,internet search
+632973,2016,53,Male,"pain, recovery, and functionality",no,0,internet search
+654332,2018,33,Female,stiffness and functionality,no,0,saw store
+673774,2016,51,Female,"pain, stiffness, and functionality",no,0,internet search
+679861,2017,22,Female,pain and recovery,no,0,news article
+657413,2016,46,Female,stiffness,no,0,internet search
+689310,2016,37,Female,"pain, recovery, and functionality",no,1,radio ad
+642511,2017,29,Female,"pain, stiffness, and functionality",no,0,radio ad
+688820,2017,46,Female,stiffness and functionality,no,0,saw store
+649374,2016,46,Female,stiffness,no,0,radio ad
+670280,2015,50,Female,stiffness and recovery,NA,0,internet search
+646362,2017,26,Female,"pain, recovery, and functionality",no,0,saw store
+640570,2017,45,Male,"pain, recovery, and functionality",no,0,referral
+645458,2018,22,Female,"stiffness, recovery, and functionality",no,0,referral
+634891,2018,47,Male,"stiffness, recovery, and functionality",no,0,saw store
+658080,2018,38,Male,"pain, stiffness, and recovery",no,0,saw store
+634830,2018,58,Female,stiffness and recovery,no,1,saw store
+654019,2017,25,Male,stiffness and functionality,no,0,saw store
+642369,2018,34,Female,stiffness and recovery,no,0,saw store
+692411,2016,34,Female,pain and stiffness,no,0,radio ad
+653921,2015,43,Male,"stiffness, recovery, and functionality",NA,0,referral
+668890,2018,57,Female,pain and functionality,no,1,radio ad
+639743,2018,44,Female,pain and recovery,no,0,radio ad
+680793,2015,39,Female,pain and stiffness,NA,0,radio ad
+667307,2015,28,Male,pain,NA,0,news article
+630742,2016,41,Male,pain and functionality,no,0,referral
+683495,2017,43,Male,stiffness and functionality,no,1,saw store
+676673,2017,34,Male,stiffness and functionality,no,0,internet search
+687146,2018,33,Male,pain and functionality,no,0,shopping cart ad
+678622,2015,55,Other,functionality,NA,0,shopping cart ad
+645579,2018,41,Female,pain and functionality,no,1,referral
+693516,2015,36,Male,recovery and functionality,NA,1,business card
+682408,2018,33,Male,stiffness and functionality,no,0,saw store
+638859,2016,35,Male,"stiffness, recovery, and functionality",no,0,internet search
+634295,2015,57,Male,"pain, stiffness, and functionality",NA,0,doctor referral
+645861,2016,58,Female,"stiffness, recovery, and functionality",no,0,internet search
+630793,2017,22,Male,recovery and functionality,no,0,referral
+687248,2017,23,Male,"pain, stiffness, and recovery",no,0,business card
+692556,2016,31,Female,"pain, recovery, and functionality",no,1,referral
+646348,2017,37,Male,"pain, stiffness, and functionality",no,0,saw store
+690373,2016,59,Female,functionality,no,0,referral
+664573,2018,22,Male,pain,no,0,referral
+649650,2017,55,Male,stiffness and functionality,no,1,referral
+636963,2017,30,Male,"pain, recovery, and functionality",no,0,saw store
+695435,2018,45,Male,functionality,no,1,internet search
+694472,2018,59,Other,pain and functionality,no,1,radio ad
+685026,2015,53,Male,stiffness and recovery,NA,0,saw store
+670188,2017,37,Female,stiffness,no,0,radio ad
+656748,2017,26,Male,"stiffness, recovery, and functionality",no,0,radio ad
+658655,2018,43,Male,pain and recovery,no,1,saw store
+692682,2016,49,Female,recovery and functionality,no,0,saw store
+686633,2018,42,Male,pain and stiffness,no,1,radio ad
+670619,2015,22,Female,stiffness and recovery,NA,0,saw store
+652630,2017,55,Female,functionality,no,1,internet search
+632753,2018,36,Other,"pain, stiffness, and functionality",no,0,internet search
+677839,2016,45,Female,"stiffness, recovery, and functionality",no,0,referral
+637226,2018,44,Male,stiffness,no,0,referral
+675785,2018,23,Male,"stiffness, recovery, and functionality",no,0,doctor referral
+680963,2018,52,Female,pain and functionality,no,1,referral
+674756,2018,23,Male,functionality,no,0,referral
+643783,2018,28,Female,recovery and functionality,no,0,referral
+652236,2018,46,Female,"pain, stiffness, and functionality",no,1,saw store
+680364,2017,31,Female,stiffness and functionality,no,0,internet search
+698908,2015,23,Female,stiffness,NA,0,referral
+639544,2017,44,Other,"pain, stiffness, and recovery",no,1,internet search
+667580,2017,55,Female,pain and stiffness,no,0,referral
+674620,2018,57,Female,stiffness and recovery,no,1,radio ad
+634585,2018,50,Female,pain,no,0,internet search
+696601,2018,22,Female,pain and recovery,no,0,youtube ad
+633842,2017,29,Male,pain and stiffness,no,0,radio ad
+689674,2018,44,Female,pain and recovery,no,0,doctor referral
+667695,2018,31,Female,pain,no,0,radio ad
+645931,2018,55,Female,pain and functionality,no,0,radio ad
+640775,2016,35,Male,recovery and functionality,no,0,saw store
+679910,2018,43,Male,pain and recovery,no,0,internet search
+678318,2016,36,Male,functionality,no,0,referral
+658273,2017,35,Male,pain and functionality,no,1,shopping cart ad
+665184,2017,49,Female,pain,no,1,internet search
+689339,2018,33,Female,pain and stiffness,no,1,internet search
+634643,2017,52,Male,recovery,no,0,internet search
+656732,2018,33,Female,functionality,no,0,saw store
+695799,2018,21,Male,functionality,no,1,referral
+684443,2017,57,Female,recovery,no,0,referral
+661351,2017,26,Female,pain and functionality,no,0,saw store
+641883,2016,56,Male,recovery and functionality,no,0,internet search
+657769,2017,45,Female,recovery,no,0,television ad
+651356,2018,51,Female,stiffness,no,0,radio ad
+676123,2016,48,Female,"stiffness, recovery, and functionality",no,0,internet search
+693502,2018,56,Female,pain and recovery,no,1,internet search
+687534,2016,41,Male,pain and recovery,no,0,internet search
+689663,2017,41,Male,"pain, stiffness, and functionality",no,0,radio ad
+654839,2018,32,Female,"pain, stiffness, and recovery",no,0,radio ad
+640270,2016,53,Female,pain and stiffness,no,0,referral
+676627,2018,29,Male,"stiffness, recovery, and functionality",no,0,youtube ad
+664563,2015,37,Female,functionality,NA,0,referral
+674810,2018,43,Female,pain and stiffness,no,0,referral
+662545,2016,58,Female,pain and recovery,no,0,internet search
+653076,2018,21,Female,"stiffness, recovery, and functionality",no,0,referral
+668845,2015,32,Male,pain and recovery,NA,0,referral
+641127,2016,58,Male,pain and recovery,no,0,radio ad
+661184,2017,38,Male,pain and stiffness,no,0,referral
+679496,2016,49,Female,pain,no,0,internet search
+638146,2018,44,Male,"pain, stiffness, and recovery",no,0,internet search
+694977,2015,45,Male,stiffness and functionality,NA,0,radio ad
+654851,2017,56,Male,"stiffness, recovery, and functionality",no,0,internet search
+658731,2015,40,Female,recovery and functionality,NA,0,radio ad
+662968,2017,51,Male,functionality,no,1,internet search
+696366,2018,46,Female,stiffness and functionality,no,0,referral
+639772,2018,44,Male,stiffness,no,0,internet search
+672822,2018,21,Male,recovery and functionality,no,0,saw store
+676501,2018,52,Male,"pain, stiffness, and functionality",no,0,saw store
+683814,2018,48,Male,recovery and functionality,no,0,internet search
+644770,2017,44,Male,stiffness and functionality,no,0,referral
+634539,2017,39,Male,functionality,no,0,radio ad
+675091,2015,50,Male,"pain, recovery, and functionality",NA,1,internet search
+676587,2017,42,Male,recovery,no,0,referral
+676799,2015,44,Female,stiffness and functionality,NA,0,internet search
+630601,2016,49,Male,pain,no,0,internet search
+654541,2017,27,Female,pain and stiffness,no,0,internet search
+645107,2018,22,Female,recovery and functionality,no,0,internet search
+693743,2018,33,Female,pain,no,0,youtube ad
+636965,2018,27,Male,pain,no,1,internet search
+643696,2016,37,Female,pain,no,0,referral
+696452,2017,52,Male,recovery and functionality,no,0,radio ad
+638282,2016,21,Male,pain and functionality,no,1,referral
+679098,2016,45,Female,recovery,no,0,radio ad
+684365,2016,55,Female,pain,no,0,internet search
+673298,2017,42,Male,recovery,no,0,referral
+694324,2018,43,Female,stiffness,no,0,referral
+665482,2016,46,Male,"pain, stiffness, and recovery",no,0,radio ad
+653661,2016,29,Male,"pain, stiffness, and recovery",no,1,referral
+690629,2016,60,Female,pain,no,1,radio ad
+656202,2018,38,Female,pain and recovery,no,1,saw store
+693827,2016,33,Other,stiffness and functionality,no,0,referral
+673747,2016,23,Female,pain and stiffness,no,0,radio ad
+696724,2018,26,Male,stiffness and functionality,no,0,internet search
+699737,2016,45,Male,stiffness and functionality,no,0,television ad
+661936,2018,50,Female,pain,no,0,doctor referral
+691972,2018,58,Female,recovery and functionality,no,1,referral
+660351,2015,47,Other,pain and functionality,NA,1,internet search
+677463,2017,38,Female,stiffness,no,1,internet search
+631027,2018,21,Other,pain and functionality,no,0,internet search
+658606,2017,20,Female,"pain, stiffness, and functionality",no,0,radio ad
+640718,2015,23,Male,"stiffness, recovery, and functionality",NA,0,internet search
+645015,2018,25,Male,stiffness and functionality,no,0,radio ad
+694872,2015,28,Female,"pain, stiffness, recovery, and functionality",NA,0,shopping cart ad
+658727,2018,31,Male,"stiffness, recovery, and functionality",no,0,saw store
+680969,2016,51,Male,pain and stiffness,no,0,referral
+692646,2018,58,Male,"stiffness, recovery, and functionality",no,0,referral
+632348,2017,39,Female,pain and recovery,no,1,referral
+632081,2017,50,Male,"stiffness, recovery, and functionality",no,0,radio ad
+651703,2018,38,Male,"pain, stiffness, and functionality",no,0,shopping cart ad
+642632,2016,29,Female,"pain, recovery, and functionality",no,0,internet search
+656297,2018,55,Male,pain and recovery,no,0,referral
+675917,2017,32,Female,functionality,no,0,referral
+697986,2016,20,Female,pain and functionality,no,0,radio ad
+652416,2017,59,Female,stiffness and recovery,no,1,radio ad
+666429,2016,32,Female,pain and recovery,no,0,referral
+676458,2017,30,Other,stiffness and recovery,no,0,internet search
+653920,2018,27,Male,pain,no,1,referral
+674562,2018,34,Male,pain,no,1,internet search
+657930,2017,22,Female,recovery,no,0,internet search
+640272,2016,53,Female,pain and recovery,no,1,internet search
+650248,2017,49,Male,"pain, stiffness, and functionality",no,0,referral
+630455,2018,56,Female,"pain, stiffness, recovery, and functionality",no,1,referral
+637081,2018,28,Other,"pain, stiffness, and functionality",no,0,radio ad
+638265,2017,41,Female,pain and functionality,no,0,radio ad
+649170,2018,31,Female,recovery,no,0,internet search
+686390,2018,58,Other,stiffness and recovery,no,0,radio ad
+674694,2016,40,Female,"pain, stiffness, recovery, and functionality",no,0,referral
+695549,2015,27,Male,pain and stiffness,NA,0,referral
+646796,2015,34,Male,"pain, recovery, and functionality",NA,1,referral
+649412,2016,40,Female,recovery,no,1,radio ad
+638432,2017,29,Male,pain and recovery,no,1,internet search
+681447,2018,24,Male,stiffness,no,0,television ad
+646616,2017,47,Female,pain,no,0,internet search
+698599,2017,28,Female,stiffness and functionality,no,0,internet search
+682640,2017,40,Male,"pain, recovery, and functionality",no,0,saw store
+697255,2018,26,Male,stiffness and functionality,no,0,radio ad
+667013,2017,48,Male,pain and recovery,yes,1,internet search
+653042,2015,26,Male,"pain, stiffness, and functionality",NA,0,radio ad
+651994,2018,59,Female,"stiffness, recovery, and functionality",no,0,saw store
+655152,2016,39,Male,"stiffness, recovery, and functionality",no,1,radio ad
+647537,2016,25,Female,stiffness and functionality,no,0,internet search
+677265,2015,57,Female,stiffness and recovery,NA,0,referral
+664931,2018,32,Female,"pain, recovery, and functionality",no,1,referral
+696973,2018,30,Male,recovery,no,1,internet search
+665038,2018,26,Male,functionality,no,0,internet search
+694363,2018,56,Female,recovery and functionality,no,1,referral
+683124,2015,34,Male,"pain, recovery, and functionality",NA,0,referral
+698851,2018,39,Female,pain and stiffness,no,0,referral
+653375,2016,33,Female,functionality,no,0,internet search
+675849,2017,35,Female,"pain, stiffness, and recovery",no,1,internet search
+664500,2017,60,Female,pain and stiffness,no,0,radio ad
+655123,2018,33,Female,stiffness and functionality,no,0,saw store
+638802,2016,57,Male,stiffness,no,0,internet search
+647356,2016,28,Female,stiffness and recovery,no,0,internet search
+657226,2018,50,Female,pain and functionality,no,1,referral
+692819,2017,58,Male,"pain, stiffness, and functionality",no,0,saw store
+648776,2017,25,Male,pain and stiffness,no,0,radio ad
+692578,2018,29,Female,pain and recovery,no,0,referral
+687586,2018,20,Male,stiffness,no,0,internet search
+691693,2017,57,Other,stiffness,no,0,internet search
+679633,2017,39,Female,pain,no,0,internet search
+658939,2018,55,Female,stiffness and functionality,no,0,radio ad
+669233,2017,39,Female,functionality,no,0,business card
+684399,2016,32,Male,stiffness and recovery,no,0,internet search
+659880,2018,34,Male,stiffness and functionality,no,0,referral
+662013,2018,43,Male,stiffness and recovery,no,1,internet search
+689788,2018,53,Female,recovery and functionality,no,1,internet search
+666248,2016,55,Female,stiffness and functionality,no,1,referral
+659406,2017,59,Male,stiffness and functionality,no,0,radio ad
+669206,2016,59,Male,pain and recovery,no,1,internet search
+685973,2017,42,Female,pain and stiffness,no,0,radio ad
+686599,2017,39,Female,"pain, stiffness, recovery, and functionality",no,0,saw store
+647247,2018,35,Male,"pain, stiffness, recovery, and functionality",no,0,radio ad
+643193,2017,21,Female,stiffness and recovery,no,0,internet search
+685721,2015,37,Male,stiffness and recovery,NA,0,radio ad
+661244,2018,23,Female,recovery,no,1,internet search
+643970,2017,28,Female,stiffness and recovery,no,0,referral
+671190,2017,53,Male,stiffness and recovery,no,1,youtube ad
+640038,2018,45,Female,"pain, recovery, and functionality",no,1,referral
+694867,2016,37,Male,recovery,no,0,referral
+668167,2018,49,Female,"stiffness, recovery, and functionality",no,1,referral
+664108,2017,50,Male,stiffness and recovery,no,0,radio ad
+662520,2018,48,Female,stiffness and functionality,no,0,internet search
+636799,2017,54,Male,recovery and functionality,no,1,internet search
+662386,2016,24,Other,pain and functionality,no,0,referral

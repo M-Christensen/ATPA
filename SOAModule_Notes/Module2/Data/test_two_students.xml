@@ -1,0 +1,58 @@
+<Test_Results>
+  <Candidate>
+    <Name> 
+      Steven
+    </Name>
+    <ID>
+      07309198
+    </ID>
+    <Scores>
+      <Question>
+        <Number> 1 </Number>
+        <Correct> A </Correct>
+        <Answered> A </Answered>
+        <Points> 1 </Points>
+      </Question>  
+      <Question>
+        <Number> 2 </Number>
+        <Correct> C </Correct>
+        <Answered> C </Answered>
+        <Points> 1 </Points>
+      </Question> 
+      <Question>
+        <Number> 3 </Number>
+        <Correct> C </Correct>
+        <Answered> D </Answered>
+        <Points> 0 </Points>
+      </Question> 
+    </Scores>
+  </Candidate>
+  <Candidate>
+    <Name> 
+      Chalise
+    </Name>
+    <ID>
+      12985540
+    </ID>
+    <Scores>
+      <Question>
+        <Number> 1 </Number>
+        <Correct> A </Correct>
+        <Answered> B </Answered>
+        <Points> 0 </Points>
+      </Question>  
+      <Question>
+        <Number> 2 </Number>
+        <Correct> C </Correct>
+        <Answered> C </Answered>
+        <Points> 1 </Points>
+      </Question> 
+      <Question>
+        <Number> 3 </Number>
+        <Correct> C </Correct>
+        <Answered> C </Answered>
+        <Points> 1 </Points>
+      </Question> 
+    </Scores>
+  </Candidate>
+</Test_Results>
