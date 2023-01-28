@@ -1,0 +1,309 @@
+title: "ATPA - Generalized Additive Models"
+
+CHUNK 1: Load and plot the traffic data
+```{r}
+library(tidyverse)
+setwd("C:/Users/McKay/Documents/Actuary/ATPA/SOAModule_Notes/Module3")
+TrafficData <- read_csv("Data/traffic_data.csv") # Read in the simulated traffic data
+
+ggplot(data = TrafficData) +
+  geom_point(mapping = aes(x = Hour, y = Traffic, col = Hold_Out))
+```
+
+CHUNK 2: Fit and plot linear regression
+```{r}
+fit1 <- lm(Traffic ~ Hour, data = TrafficData, subset = !Hold_Out)
+TrafficData1 <- bind_cols(TrafficData, Predict = predict(fit1, newdata = TrafficData), Order = 1) # Add a new column to the dataset which contains the predictions (makes graphing easier)
+
+# Plot the data and the predictions
+ggplot(data = TrafficData1) +
+  geom_point(mapping = aes(x = Hour, y = Traffic, col = Hold_Out)) +
+  geom_line(mapping = aes(x = Hour, y = Predict))
+```
+
+CHUNK 3: Polynomial regression
+```{r}
+# Fit various polynomial regressions
+
+fit2 <- lm(Traffic ~ poly(Hour, 2), data = TrafficData, subset = !Hold_Out)
+fit3 <- lm(Traffic ~ poly(Hour, 3), data = TrafficData, subset = !Hold_Out)
+fit5 <- lm(Traffic ~ poly(Hour, 5), data = TrafficData, subset = !Hold_Out)
+fit8 <- lm(Traffic ~ poly(Hour, 8), data = TrafficData, subset = !Hold_Out)
+fit10 <- lm(Traffic ~ poly(Hour, 10), data = TrafficData, subset = !Hold_Out)
+
+
+# Prepare the predictions for plotting
+
+TrafficData2 <- bind_cols(TrafficData, Predict = predict(fit2, newdata = TrafficData), Order = 2)
+TrafficData3 <- bind_cols(TrafficData, Predict = predict(fit3, newdata = TrafficData), Order = 3)
+TrafficData5 <- bind_cols(TrafficData, Predict = predict(fit5, newdata = TrafficData), Order = 5)
+TrafficData8 <- bind_cols(TrafficData, Predict = predict(fit8, newdata = TrafficData), Order = 8)
+TrafficData10 <- bind_cols(TrafficData, Predict = predict(fit10, newdata = TrafficData), Order = 10)
+
+AllPredTraffic <- bind_rows(TrafficData1, TrafficData2, TrafficData3, TrafficData5, TrafficData8, TrafficData10)
+
+ggplot(data = AllPredTraffic) +
+  geom_point(mapping = aes(x = Hour, y = Traffic, col = Hold_Out)) +
+  geom_line(mapping = aes(x = Hour, y = Predict)) +
+  facet_wrap("Order") +
+  coord_cartesian(ylim = c(0, 2500))
+```
+
+CHUNK 4: Polynomial regression with log-transformed responses
+```{r}
+# Fit various polynomial regressions
+
+TrafficData <- TrafficData %>% mutate(logTraffic = log(Traffic))
+
+Lfit1 <- lm(logTraffic ~ Hour, data = TrafficData, subset = !Hold_Out)
+Lfit2 <- lm(logTraffic ~ poly(Hour, 2), data = TrafficData, subset = !Hold_Out)
+Lfit3 <- lm(logTraffic ~ poly(Hour, 3), data = TrafficData, subset = !Hold_Out)
+Lfit5 <- lm(logTraffic ~ poly(Hour, 5), data = TrafficData, subset = !Hold_Out)
+Lfit8 <- lm(logTraffic ~ poly(Hour, 8), data = TrafficData, subset = !Hold_Out)
+Lfit10 <- lm(logTraffic ~ poly(Hour, 10), data = TrafficData, subset = !Hold_Out)
+
+
+# Prepare the predictions for plotting
+
+LTrafficData1 <- bind_cols(TrafficData, Predict = exp(predict(Lfit1, newdata = TrafficData)), Order = 1)
+LTrafficData2 <- bind_cols(TrafficData, Predict = exp(predict(Lfit2, newdata = TrafficData)), Order = 2)
+LTrafficData3 <- bind_cols(TrafficData, Predict = exp(predict(Lfit3, newdata = TrafficData)), Order = 3)
+LTrafficData5 <- bind_cols(TrafficData, Predict = exp(predict(Lfit5, newdata = TrafficData)), Order = 5)
+LTrafficData8 <- bind_cols(TrafficData, Predict = exp(predict(Lfit8, newdata = TrafficData)), Order = 8)
+LTrafficData10 <- bind_cols(TrafficData, Predict = exp(predict(Lfit10, newdata = TrafficData)), Order = 10)
+
+LAllPredTraffic <- bind_rows(LTrafficData1, LTrafficData2, LTrafficData3, LTrafficData5, LTrafficData8, LTrafficData10)
+
+ggplot(data = LAllPredTraffic) +
+  geom_point(mapping = aes(x = Hour, y = Traffic, col = Hold_Out)) +
+  geom_line(mapping = aes(x = Hour, y = Predict)) +
+  facet_wrap("Order") +
+  coord_cartesian(ylim = c(0, 2500))
+```
+
+CHUNK 5: Generalized additive models
+```{r}
+library(mgcv)
+
+fitGAM <- gam(Traffic ~ s(Hour), data = TrafficData, subset = !Hold_Out)
+TrafficDataGAM <- bind_cols(TrafficData, Predict = predict(fitGAM, newdata = TrafficData))
+
+ggplot(data = TrafficDataGAM) +
+  geom_point(mapping = aes(x = Hour, y = Traffic, col = Hold_Out)) +
+  geom_line(mapping = aes(x = Hour, y = Predict))
+
+
+summary(fitGAM)
+
+
+```
+
+CHUNK 6: Comparing linear models and GAMs
+```{r}
+summary(lm(Traffic ~ Hour, data = TrafficData, subset = !Hold_Out))
+summary(gam(Traffic ~ Hour, data = TrafficData, subset = !Hold_Out))
+```
+
+CHUNK 7: Model comparison
+```{r}
+AIC(fit1, fit2, fit3, fit5, fit8, fit10, fitGAM)
+```
+
+CHUNK 8: Checking the GAM
+```{r} 
+gam.check(fitGAM)
+```
+
+CHUNK 9: Reducing the dimension of the smooth
+```{r}
+
+fitGAMFew <- gam(Traffic ~ s(Hour, k = 4), data = TrafficData, subset = !Hold_Out)
+TrafficDataGAMFew <- bind_cols(TrafficData, Predict = predict(fitGAMFew, newdata = TrafficData))
+
+ggplot(data = TrafficDataGAMFew) +
+  geom_point(mapping = aes(x = Hour, y = Traffic, col = Hold_Out)) +
+  geom_line(mapping = aes(x = Hour, y = Predict))
+
+summary(fitGAMFew)
+
+gam.check(fitGAMFew)
+```
+
+CHUNK 10: Increasing the dimension of the smooth
+```{r}
+
+fitGAMMany <- gam(Traffic ~ s(Hour, k = 17), data = TrafficData, subset = !Hold_Out)
+TrafficDataGAMMany <- bind_cols(TrafficData, Predict = predict(fitGAMMany, newdata = TrafficData))
+
+ggplot(data = TrafficDataGAMMany) +
+  geom_point(mapping = aes(x = Hour, y = Traffic, col = Hold_Out)) +
+  geom_line(mapping = aes(x = Hour, y = Predict))
+
+summary(fitGAMMany)
+
+gam.check(fitGAMMany)
+```
+
+CHUNK 11: Variable selection example 
+```{r}
+
+set.seed(1234)
+N <- 10000 # Sample size
+
+# Generate the explanatory variables
+x1 <- rnorm(N)
+x2 <- rnorm(N)
+x3 <- rnorm(N)
+x4 <- rnorm(N)
+x5 <- rnorm(N)
+x6 <- rnorm(N)
+x7 <- rnorm(N)
+x8 <- rnorm(N)
+x9 <- rnorm(N)
+x10 <- rnorm(N)
+
+y <- 3 + 2 * x1 + sin(x2) + rnorm(N, 0, 3) # Generate the response variables, only dependent on x1 and sine(x2)
+
+data_mat <- tibble(y, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10)
+
+(GAMFit <- gam(y ~ s(x1) + s(x2) + s(x3) + s(x4) + s(x5) + s(x6) + s(x7) + s(x8) + s(x9) + s(x10), select = TRUE))
+
+plot(GAMFit)
+
+summary(GAMFit)
+
+
+```
+
+CHUNK 12: Exercise 3.2.1
+```{r}
+set.seed(1000)
+
+HotelData <- read_csv("Data/hotel_bookings_small.csv")
+
+# 1. 
+HotelData <- HotelData %>% mutate(total_stay = stays_in_week_nights + stays_in_weekend_nights)
+
+# 2,
+samps <- sample(1:nrow(HotelData), size = 0.8*nrow(HotelData), replace=FALSE)
+HotelData_train <- HotelData[samps,]
+HotelData_test <- HotelData[-samps,]
+
+# 3. 
+mod_train <- gam(adr ~ s(total_stay), data = HotelData_train)
+
+
+# 4.
+plot(mod_train)
+mod_train %>% summary
+
+# 5.
+mod_train2 <- gam(adr ~ s(total_stay) + lead_time + adults + market_segment, data = HotelData_train)
+mod_train3 <- gam(adr ~ total_stay, data = HotelData_train)
+mod_train4 <- gam(adr ~ total_stay + lead_time+ adults + market_segment, data = HotelData_train)
+
+mod_train$gcv.ubre.dev
+mod_train2$gcv.ubre.dev
+mod_train3$gcv.ubre.dev
+mod_train4$gcv.ubre.dev
+
+# 5. 
+summary(mod_train)
+gam.check(mod_train)
+summary(mod_train2)
+gam.check(mod_train2)
+
+```
+
+CHUNK 13: Exercise 3.2.1: Solution
+```{r}
+
+set.seed(1000)
+
+HotelData <- read_csv("Data/hotel_bookings_small.csv") %>%
+  mutate(total_stay = stays_in_week_nights + stays_in_weekend_nights) # 1. create total_stay
+HotelData <- HotelData %>%
+  mutate(set = sample(c("Train", "Test"), nrow(HotelData), prob = c(0.8, 0.2), replace = TRUE)) # 2. Divide the data into train and test
+
+# 3. Fit a simple GAM
+HotelGAM <- gam(adr ~ s(total_stay), data = HotelData, subset = (set == "Train")) 
+HotelDataGAM <- bind_cols(HotelData, Predict = predict(HotelGAM, newdata = HotelData))
+
+# 4. Plot the predicted values for the test set
+ggplot(data = HotelDataGAM[HotelDataGAM$set == "Test", ]) +
+  geom_point(mapping = aes(x = total_stay, y = adr)) +
+  geom_line(mapping = aes(x = total_stay, y = Predict), col = "blue")
+plot(HotelGAM)
+
+# 5. Fit all four models and obtain MSE
+HotelLM1 <- lm(adr ~ total_stay, data = HotelData, subset = (set == "Train"))
+HotelLM2 <- lm(adr ~ total_stay + lead_time + adults + market_segment, data = HotelData, subset = (set == "Train"))
+HotelGAM1 <- gam(adr ~ s(total_stay), data = HotelData, subset = (set == "Train"))
+HotelGAM2 <- gam(adr ~ s(total_stay) + lead_time + adults + market_segment, data = HotelData, subset = (set == "Train"))
+
+
+HotelAllFit <- bind_cols(HotelData,
+  PredLM1 = predict(HotelLM1, newdata = HotelData),
+  PredLM2 = predict(HotelLM2, newdata = HotelData),
+  PredGAM1 = predict(HotelGAM1, newdata = HotelData),
+  PredGAM2 = predict(HotelGAM2, newdata = HotelData)
+)
+
+HotelAllFit %>%
+  filter(set == "Test") %>%
+  mutate(
+    errorLM1 = PredLM1 - adr,
+    errorLM2 = PredLM2 - adr,
+    errorGAM1 = PredGAM1 - adr,
+    errorGAM2 = PredGAM2 - adr,
+  ) %>%
+  summarize(
+    MSPELM1 = mean(errorLM1^2),
+    MSPELM2 = mean(errorLM2^2),
+    MSPEGAM1 = mean(errorGAM1^2),
+    MSPEGAM2 = mean(errorGAM2^2)
+  )
+
+# 6. Model Diagnostics
+gam.check(HotelGAM1)
+gam.check(HotelGAM2)
+
+# 7. Analyze the chosen model
+summary(HotelGAM2)
+```
+
+CHUNK 14 - Gamma GLM on exercise
+
+```{r}
+
+HotelDataGLM <- HotelData %>% 
+                  mutate(adr1 = adr + 1)
+
+HotelLM <- lm(adr1 ~ total_stay + lead_time + adults + market_segment, data = HotelDataGLM, subset = (set == "Train"))
+HotelLMGAM <- gam(adr1 ~ s(total_stay) + lead_time + adults + market_segment, data = HotelDataGLM, subset = (set == "Train"))
+HotelGLM <- glm(adr1 ~ total_stay + lead_time + adults + market_segment, family="Gamma", data = HotelDataGLM, subset = (set == "Train"))
+HotelGLMGAM <- gam(adr1 ~ s(total_stay) + lead_time + adults + market_segment, family="Gamma", data = HotelDataGLM, subset = (set == "Train"))
+
+HotelGLMAllFit <- bind_cols(HotelDataGLM,
+  PredLM = predict(HotelLM, newdata = HotelDataGLM),
+  PredLMGAM = predict(HotelLMGAM, newdata = HotelDataGLM),
+  PredGLM = predict(HotelGLM, newdata = HotelDataGLM, type = "response"),
+  PredGLMGAM = predict(HotelGLMGAM, newdata = HotelDataGLM, type = "response")
+)
+
+HotelGLMAllFit %>%
+  filter(set == "Test") %>%
+  mutate(
+    errorLM = PredLM - adr1,
+    errorLMGAM = PredLMGAM - adr1,
+    errorGLM = PredGLM - adr1,
+    errorGLMGAM = PredGLMGAM - adr1,
+  ) %>%
+  summarize(
+    MSPELM = mean(errorLM^2),
+    MSPELMGAM = mean(errorLMGAM^2),
+    MSPEGLM = mean(errorGLM^2),
+    MSPEGLMGAM = mean(errorGLMGAM^2)
+  )
+
+```

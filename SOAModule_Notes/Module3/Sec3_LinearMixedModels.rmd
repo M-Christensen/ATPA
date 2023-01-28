@@ -1,0 +1,259 @@
+---
+title: "ATPA Linear Mixed Models"
+---
+
+CHUNK 1: Read in and plot data
+```{r}
+library(tidyverse)
+comp_course <- read_csv("Data/comp_course.csv")
+comp_course %>% ggplot(aes(x = grade)) +
+  geom_histogram(color = "darkblue", fill = "lightblue")
+```
+
+CHUNK 2: Fit standard regression model
+```{r}
+lm_mod <- lm(grade ~ ., data = comp_course)
+summary(lm_mod)
+drop1(lm_mod) # Uses AIC to determine if variables can be dropped, treating categorical variables as a single variable to keep or drop. All three predictors are deemed significant.
+```
+
+CHUNK 3: Fit a random intercepts model 
+```{r}
+# the lme4 package is used for fitting mixed models
+# install.packages("lme4")
+library(lme4)
+# A variable is treated as a random effect by using (1|variable) in the model formula
+ri_mod <- lmer(grade ~ (1 | prof) + year + hours + major, data = comp_course)
+```
+
+CHUNK 4: Compare fits and predictions between standard and mixed model
+```{r}
+# Compare coefficients between standard and mixed model
+cbind(lm_mod$coefficients[6:10], summary(ri_mod)$coefficients[-1, 1])
+
+# Find and plot the predictions for the two models.
+plt_dat <- tibble("lm_preds" = predict(lm_mod), "mm_preds" = predict(ri_mod))
+plt_dat %>% ggplot(aes(x = lm_preds, y = mm_preds)) +
+  geom_point()
+```
+
+CHUNK 5: Find random effects
+```{r}
+# use the ranef function to get random effects of a mixed model
+ranef(ri_mod)
+
+# Linear Regression model Effects
+lm_prof <- c(0, lm_mod$coefficients[2:5])
+prof_effects <- lm_prof - mean(lm_prof)
+prof_effects
+```
+
+CHUNK 6: Perform prediction for new data with a new factor level for Professor
+```{r}
+comp_course_2 <- read_csv("Data/comp_course_2.csv")
+
+# We need to split this data into two parts, the observations with the same professors as the original data and the observations with new professors
+oldprof <- comp_course_2$prof %in% unique(comp_course$prof)
+# Predict all data using argument "re.form=NA" which says to not add mean for random effect. This will be best for observations with new factor levels
+preds <- predict(ri_mod, newdata = comp_course_2, re.form = NA)
+# Replace observations with professors from original data with predictions having added in the mean of the random effect (because it exists only for these ones)
+preds[oldprof] <- predict(ri_mod, newdata = comp_course_2[oldprof, ])
+
+# Plot the predictions
+isF <- ifelse(comp_course_2$prof == "F", "F", "not F")
+tibble("Grade" = comp_course_2$grade, "Prediction" = preds, "Professor" = isF) %>%
+  ggplot(aes(x = Grade, y = Prediction)) +
+  geom_point(aes(color = Professor))
+```
+
+CHUNK 7: Fit a random slopes model 
+```{r}
+
+# The new interaction term is "(0+fixed_effect|random_effect)". In this case it is "(0+hours|prof)". hours is still included as a fixed effects variable
+rs_mod <- lmer(grade ~ (1 | prof) + (0 + hours | prof) + year + hours + major, data = comp_course)
+
+# The summary has several parts to it. The most important pieces are (1) the random effects part gives the variance of each random effect and (2) the fixed effects part gives estimates and standard errors for the fixed effect variables
+summary(rs_mod)
+
+# Notice that hours shows up as a fixed effect but also as an interaction with prof as a random effect
+```
+
+CHUNK 8: Create data for Exercise 3.3.2
+```{r}
+individual <- rep(c("Aaron", "Felipe", "Sonia"), each = 5)
+weekend <- c(1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1)
+weather <- c("sunny", "cloudy", "rain", "other", "sunny", "sunny", "rain", "rain", "cloudy", "other", "sunny", "sunny", "sunny", "rain", "cloudy")
+temperature <- c(79, 60, 72, 76, 69, 92, 80, 72, 79, 81, 56, 61, 68, 78, 79)
+email_sent <- c(5, 6, 14, 17, 24, 8, 0, 1, 5, 12, 25, 22, 21, 12, 13)
+email <- tibble(individual, weekend, weather, temperature, email_sent)
+email
+
+# Part 1
+"Individual - Random
+ Others - Fixed"
+
+# Part 2
+ranint_mod <- lmer(email_sent ~ (1 | individual) + weekend + weather + temperature, data = email)
+
+# Part 3
+ranintslopes_mod <- lmer(email_sent ~ (1 | individual) + (0 + temperature | individual) + weekend + weather + temperature, data = email)
+```
+
+CHUNK 9: Exercise 3.3.2: Solution
+```{r}
+individual <- rep(c("Aaron", "Felipe", "Sonia"), each = 5)
+weekend <- c(1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1)
+weather <- c("sunny", "cloudy", "rain", "other", "sunny", "sunny", "rain", "rain", "cloudy", "other", "sunny", "sunny", "sunny", "rain", "cloudy")
+temperature <- c(79, 60, 72, 76, 69, 92, 80, 72, 79, 81, 56, 61, 68, 78, 79)
+email_sent <- c(5, 6, 14, 17, 24, 8, 0, 1, 5, 12, 25, 22, 21, 12, 13)
+email <- tibble(individual, weekend, weather, temperature, email_sent)
+email
+
+# Part 2
+email_ri <- lmer(email_sent ~ (1 | individual) + weekend + weather + temperature, data = email)
+summary(email_ri)
+
+# Part 3
+email_rs <- lmer(email_sent ~ (1 | individual) + (0 + temperature | individual) + weekend + weather + temperature, data = email)
+summary(email_rs)
+```
+
+CHUNK 10: Create data frame and fit repeated measures and longitudinal models
+```{r}
+Patient <- rep(c(1, 2, 3), each = 4)
+Time <- rep(c(0, 10, 20, 30), 3)
+Dosage <- c(0, 60, 90, 100, 0, 30, 50, 70, 0, 40, 80, 100)
+Response <- c(710, 540, 510, 450, 650, 590, 500, 460, 890, 700, 590, 440)
+dose_response <- tibble(Patient, Time, Dosage, Response)
+
+# Fit random slopes model without time
+dose_mod1 <- lmer(Response ~ (1 | Patient) + Dosage, data = dose_response)
+
+# Add time as a fixed effect
+dose_mod2 <- lmer(Response ~ (1 | Patient) + Dosage + Time, data = dose_response)
+
+# Create a longitudinal model by adding an interaction between patient and time
+dose_mod3 <- lmer(Response ~ (1 | Patient) + (0 + Time | Patient) + Dosage + Time, data = dose_response)
+
+# Compare the model fit using AIC function
+AIC(dose_mod1)
+AIC(dose_mod2)
+AIC(dose_mod3)
+
+# The model with an interaction between time and the random effect is the best
+```
+
+CHUNK 11: Revisit computer course data with a GLMM
+```{r}
+comp_course$got_A <- comp_course$grade >= 90
+
+# Just like in the glm function, a new argument for family is included with the same options
+glmm_mod_ri <- glmer(got_A ~ (1 | prof) + year + hours + major, data = comp_course, family = binomial(link = "logit"))
+
+
+# Random slopes
+glmm_mod_rs <- glmer(got_A ~ (1 | prof) + (0 + hours | prof) + year + hours + major, data = comp_course, family = binomial(link = "logit"))
+
+# Fixed effect only
+glm_mod <- glm(got_A ~ prof + year + hours + major + prof:hours, data = comp_course, family = binomial(link = "logit"))
+
+## Compare all three models using AIC
+AIC(glmm_mod_ri)
+AIC(glmm_mod_rs)
+AIC(glm_mod)
+
+# Fixed effect model is actually the best fit for this model. Could use other metrics, such as prediction for test or validation sets to confirm. There are other reasons to use mixed models beyond model fit, as mentioned.
+```
+
+CHUNK 12: Exercise 3.3.3
+```{r}
+
+individual <- rep(c("Aaron", "Felipe", "Sonia"), each = 5)
+day <- rep(1:5, 3)
+weather <- c("sunny", "cloudy", "rain", "other", "sunny", "sunny", "rain", "rain", "cloudy", "other", "sunny", "sunny", "sunny", "rain", "cloudy")
+temperature <- c(79, 60, 72, 76, 69, 92, 80, 72, 79, 81, 56, 61, 68, 78, 79)
+email_sent <- c(5, 6, 14, 17, 24, 8, 0, 1, 5, 12, 25, 22, 21, 12, 13)
+email <- tibble(individual, day, weather, temperature, email_sent)
+# email
+
+mod1 <- lmer(email_sent ~ (1 | individual) + (0 + day | individual) + day + weather + temperature, data = email)
+
+mod_glmm <- glmer(email_sent ~ (1 | individual) + (0 + day | individual) + day + weather + temperature, data = email, family = poisson(link = 'log'))
+
+AIC(mod1)
+AIC(mod_glmm)
+
+```
+
+CHUNK 13: Exercise 3.3.3: Solution
+```{r}
+individual <- rep(c("Aaron", "Felipe", "Sonia"), each = 5)
+day <- rep(1:5, 3)
+weather <- c("sunny", "cloudy", "rain", "other", "sunny", "sunny", "rain", "rain", "cloudy", "other", "sunny", "sunny", "sunny", "rain", "cloudy")
+temperature <- c(79, 60, 72, 76, 69, 92, 80, 72, 79, 81, 56, 61, 68, 78, 79)
+email_sent <- c(5, 6, 14, 17, 24, 8, 0, 1, 5, 12, 25, 22, 21, 12, 13)
+email <- tibble(individual, day, weather, temperature, email_sent)
+
+# random slopes model for the email data
+email_rs2 <- lmer(email_sent ~ (1 | individual) + (0 + day | individual) + day + weather + temperature, data = email)
+
+# glmm random slopes model
+email_rs3 <- glmer(email_sent ~ (1 | individual) + (0 + day | individual) + day + weather + temperature, data = email, family = poisson(link = "log"))
+
+AIC(email_rs2)
+AIC(email_rs3)
+
+# The normal model is the better fit for this data
+```
+
+CHUNK 14: Create the loss data set and calculate the credibility premium
+```{r}
+line <- c(1, 1, 1, 2, 2, 2, 3, 3, 3)
+exposure <- c(20, 30, 40, 10, 5, 10, 100, 70, 75)
+loss <- c(4000, 4500, 7000, 2000, 1500, 2500, 15000, 13000, 12000)
+
+# calculate average loss per exposure
+avloss <- loss / exposure
+
+# build data for building a model
+cred_dat <- tibble(line, exposure, avloss)
+
+# build a mixed model and view random effects
+mod_cred <- lmer(avloss ~ 1 + (1 | line), data = cred_dat, weights = exposure)
+mod_cred
+ranef(mod_cred)
+
+# examine predictions for each line of business
+cred_premium <- unique(cbind(line, predict(mod_cred)))
+cred_premium
+
+# Total predicted claims
+sum(cred_dat$exposure*predict(mod_cred))
+loss %>% sum
+```
+
+CHUNK 15: Calculate credibility premium with gamma distribution
+```{r}
+mod_cred2 <- glmer(avloss ~ 1 + (1 | line), data = cred_dat, weights = exposure, family = Gamma(link = "log"))
+cred_premium2 <- unique(cbind(line, predict(mod_cred2, type = "response")))
+cred_premium2
+```
+
+CHUNK 16: Exercise 3.3.4
+```{r}
+claims <- c(12, 12, 20, 8, 2, 7, 20, 21, 13)
+cred_dat$avclaims <- claims / cred_dat$exposure
+
+mod <- lmer(avclaims ~ 1 + (1 | line), data = cred_dat, weights = exposure)
+unique(bind_cols(Line = cred_dat$line, Preds = predict(mod)))
+```
+
+CHUNK 17: Exercise 3.3.4: Solution
+```{r}
+claims <- c(12, 12, 20, 8, 2, 7, 20, 21, 13)
+cred_dat$avclaims <- claims / cred_dat$exposure
+
+mod_cred3 <- lmer(avclaims ~ 1 + (1 | line), data = cred_dat, weights = exposure)
+cred_premium3 <- unique(cbind(line, predict(mod_cred3)))
+cred_premium3
+```
