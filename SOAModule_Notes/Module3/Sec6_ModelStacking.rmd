@@ -13,7 +13,7 @@ library(rpart)
 set.seed(1000)
 
 # Load the data and create a new variable that reflects total stay length
-HotelData_tmp <- read_csv("hotel_bookings_small.csv") %>%
+HotelData_tmp <- read_csv("Data/hotel_bookings_small.csv") %>%
   mutate(total_stay = stays_in_week_nights + stays_in_weekend_nights) %>%
   mutate(LMPred = NA, RTPred = NA, NNPred = NA) # Add columns for the three model predictions
 
