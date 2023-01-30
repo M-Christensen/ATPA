@@ -1,0 +1,845 @@
+---
+title: "ATPA - NeuralNetworks"
+---
+
+CHUNK 1: Load the (artificial) hiring data
+```{r}
+setwd("C:/Users/McKay/Documents/Actuary/ATPA/SOAModule_Notes/Module3")
+
+library(tidyverse)
+library(ggplot2)
+library(ANN2)
+
+data <- read.csv(file = "Data/hiring.csv", stringsAsFactors = TRUE)
+
+ggplot(data = data, aes(x = T, y = C)) +
+  geom_point(aes(color = as.factor(H)))
+```
+
+CHUNK 2: Fit a neural network
+```{r}
+set.seed(1)
+nn <- neuralnetwork(
+  X = data[, 1:2], y = data[, 3],
+  hidden.layers = c(2), regression = FALSE,
+  standardize = TRUE, loss.type = "log", val.prop = 0,
+  activ.functions = "sigmoid", learn.rates = 0.1,
+  n.epochs = 100, batch.size = 10, random.seed = 1
+)
+
+class <- predict(nn, data[, 1:2])$predictions
+table(data[, 3], class)
+
+
+```
+
+CHUNK 3: Fit a decision tree
+```{r}
+library(rpart)
+library(rpart.plot)
+tree <- rpart(as.factor(H) ~ T + C, data = data, cp = 0)
+rpart.plot(tree)
+predict.tree <- ifelse(predict(tree)[, 2] > 0.5, 1, 0)
+table(predict.tree, data$H)
+```
+
+CHUNK 4: Compare the two models
+```{r}
+library(gridExtra)
+
+# Create a matrix of C and T values
+T <- seq(from = 40, to = 100, by = 60 / 250)
+T <- rep(T, 251)
+C <- seq(from = 20, to = 80, by = 60 / 250)
+C <- rep(C, times = 1, each = 251)
+df.rect <- data.frame(T = T, C = C)
+remove(T, C)
+df.rect$predict.nn <- predict(nn, df.rect)$predictions
+df.rect$predict.tree <- as.factor(ifelse(predict(tree, newdata = df.rect)[, 2] > 0.5, 1, 0))
+p1 <- ggplot(data = df.rect, aes(x = T, y = C)) +
+  geom_point(aes(color = predict.nn))
+p2 <- ggplot(data = df.rect, aes(x = T, y = C)) +
+  geom_point(aes(color = predict.tree))
+grid.arrange(p1, p2, ncol = 2)
+```
+
+CHUNK 5: Fit a neural network to the hotel booking data
+```{r}
+rm(list = ls())
+set.seed(1)
+hotel <- read.csv("Data/hotel_bookings_small.csv", stringsAsFactors = TRUE)
+
+# First use just quantitative variables; don't include the target or categorical variables in the set of predictors
+
+quantpredictors <- !names(hotel) %in% c("is_canceled", "market_segment", "deposit_type")
+x <- hotel[, quantpredictors]
+y <- hotel$is_canceled
+
+testind <- sample(dim(hotel)[1], 500) # Use 500 of the 5000 observations as test set
+
+hotelnet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind], # Train/validate on remaining 4500 observations
+  hidden.layers = 15, # There is one hidden layer with 15 neurons, for two layers with say 10 and 5 neurons use c(10, 5)
+  regression = FALSE, # Treat as a classification problem
+  standardize = TRUE, # Standardize all variables
+  loss.type = "log", # Cross entropy is used
+  activ.functions = "relu", # ReLU activation function
+  learn.rates = 1e-03, # Set learning rate for network (the default is 1e-04, this choice will speed up the process)
+  n.epochs = 1000, # Length of network training
+  val.prop = 0.1 / 0.9, # Use (1/9)*4500 = 500 for validation
+  random.seed = 1 # resets the seed just for this function
+)
+```
+
+CHUNK 6: Check for overfitting
+```{r}
+# This code plots the training and validation loss by epoch, with mini-batch losses averaged within each epoch to reduce noise.
+
+avglossbyepoch <- function(anet) {
+  n_epoch <- anet$Rcpp_ANN$getTrainHistory()$n_epoch
+  trainloss <- valloss <- rep(NA, times = n_epoch)
+  bpere <- max(which(anet$Rcpp_ANN$getTrainHistory()$epoch == 0))
+  trainloss <- matrix(
+    data = anet$Rcpp_ANN$getTrainHistory()$train_loss,
+    ncol = n_epoch, nrow = bpere
+  )
+  valloss <- matrix(
+    data = anet$Rcpp_ANN$getTrainHistory()$val_loss,
+    ncol = n_epoch, nrow = bpere
+  )
+  trainlossavg <- apply(trainloss, 2, mean)
+  vallossavg <- apply(valloss, 2, mean)
+  return(list(training = trainlossavg, validation = vallossavg))
+}
+
+losses <- avglossbyepoch(hotelnet)
+plot(losses$training,
+  type = "l", xlab = "Epoch", ylab = "Loss",
+  main = "Training and Validation Losses by Epoch",
+  ylim = c(0.45, 0.65)
+)
+lines(losses$validation, col = 2, lty = 2)
+legend("topright", legend = c("Training", "Validation"), col = c(1, 2), lty = c(1, 2))
+```
+
+CHUNK 7: Retrain using 200 epochs and evaluate the results
+```{r}
+hotelnet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 15, regression = FALSE,
+  standardize = TRUE, loss.type = "log",
+  activ.functions = "relu", n.epochs = 200,
+  learn.rates = 1e-03, val.prop = 0.1 / 0.9,
+  random.seed = 1
+)
+
+testpreds <- predict(hotelnet, x[testind, ])
+head(testpreds$probabilities)
+ypreds <- testpreds$predictions
+table(y[testind], ypreds) # Confusion matrix
+sum(y[testind] == ypreds) / 500 # Accuracy on test data
+
+library(pROC)
+roc <- roc(y[testind], testpreds$probabilities[, 2])
+auc(roc)
+```
+
+CHUNK 8: Fit a logistic regression model to the same data and compare results
+```{r}
+hotellogit <- glm(is_canceled ~ . - market_segment - deposit_type, data = hotel, subset = -testind, family = "binomial") # Fit the logistic regression model using the same quantitative predictors
+logitpreds <- ifelse(predict(hotellogit, hotel[testind, ], type = "response") < 0.5, 0, 1) # Do predictions on test set using fitted model
+
+table(y[testind], logitpreds) # Confusion matrix
+sum(y[testind] == logitpreds) / 500 # Accuracy on test data
+
+roc <- roc(y[testind], predict(hotellogit, hotel[testind, ], type = "response"))
+auc(roc)
+```
+
+CHUNK 9: Add categorical variables to the neural network model
+```{r}
+# Do OHE for categorical variables
+library(nnet)
+market_segment_OHE <- class.ind(hotel$market_segment)
+deposit_type_OHE <- class.ind(hotel$deposit_type)
+head(market_segment_OHE)
+head(deposit_type_OHE)
+
+x <- cbind(x, market_segment_OHE, deposit_type_OHE)
+
+# Run NN again with categorical variables, starting at 200 epochs
+
+hotelnet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 15, regression = FALSE,
+  standardize = TRUE, loss.type = "log",
+  activ.functions = "relu", n.epochs = 200,
+  learn.rates = 1e-03, val.prop = 0.1 / 0.9,
+  random.seed = 1
+)
+
+losses <- avglossbyepoch(hotelnet)
+plot(losses$training,
+  type = "l", xlab = "Epoch", ylab = "Loss",
+  main = "Training and Validation Losses by Epoch",
+  ylim = c(0.35, 0.6)
+)
+lines(losses$validation, col = 2, lty = 2)
+legend("topright", legend = c("Training", "Validation"), col = c(1, 2), lty = c(1, 2))
+```
+
+CHUNK 10: Retrain neural net for 30 epochs
+```{r}
+# Run NN again for 30 epochs
+
+hotelnet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 15, regression = FALSE,
+  standardize = TRUE, loss.type = "log",
+  activ.functions = "relu", n.epochs = 30,
+  learn.rates = 1e-03, val.prop = 0.1 / 0.9,
+  random.seed = 1
+)
+
+losses <- avglossbyepoch(hotelnet)
+plot(losses$training,
+  type = "l", xlab = "Epoch", ylab = "Loss",
+  main = "Training and Validation Losses by Epoch",
+  ylim = c(0.35, 0.6)
+)
+lines(losses$validation, col = 2, lty = 2)
+legend("topright", legend = c("Training", "Validation"), col = c(1, 2), lty = c(1, 2))
+
+testpreds <- predict(hotelnet, x[testind, ])
+ypreds <- testpreds$predictions
+table(y[testind], ypreds)
+sum(y[testind] == ypreds) / 500
+
+roc <- roc(y[testind], testpreds$probabilities[, 2])
+auc(roc)
+```
+
+CHUNK 11: Cross-validation, will take longer as 10 nets are fit
+```{r}
+# k-fold CV
+
+library(caret) # used only to create the folds
+k <- 5
+set.seed(1)
+fold <- createFolds(y, k = k, list = FALSE) # fold is vector that indicates which fold an observation is assigned to
+
+# This function calculates the log loss; it is needed because we want to calculate the loss when predictions are made on the fold that is held out
+logloss <- function(y, yhat) {
+  if (y == yhat) {
+    return(0)
+  } else {
+    return(-((1 - y) * log(1 - yhat) + y * log(yhat)))
+  }
+}
+
+cvlossrelu <- cvlosssig <- rep(NA, times = k) # Vectors to hold the results
+
+for (i in 1:k) {
+  cvirelu <- neuralnetwork(
+    X = x[fold != i, ], y = y[fold != i],
+    hidden.layers = 15, regression = FALSE,
+    standardize = TRUE, loss.type = "log",
+    activ.functions = "relu", n.epochs = 30,
+    learn.rates = 1e-03, val.prop = 0,
+    random.seed = 1
+  ) # Fit a neural network using ReLU to the observations that are not in fold i. Note val.prop set to 0.
+
+  cvisig <- neuralnetwork(
+    X = x[fold != i, ], y = y[fold != i],
+    hidden.layers = 15, regression = FALSE,
+    standardize = TRUE, loss.type = "log",
+    activ.functions = "sigmoid", n.epochs = 30,
+    learn.rates = 1e-03, val.prop = 0,
+    random.seed = 1
+  ) # Fit a neural network using sigmoid to the observations that are not in fold i. Note val.prop set to 0.
+
+  yprobsrelu <- predict(cvirelu, x[fold == i, ])$probabilities[, 2] # Fitted values using ReLU
+  yprobssig <- predict(cvisig, x[fold == i, ])$probabilities[, 2] # Fitted values using sigmoid
+  cvlossrelu[i] <- mean(mapply(logloss, y[fold == i], yprobsrelu))
+  cvlosssig[i] <- mean(mapply(logloss, y[fold == i], yprobssig))
+}
+
+cvrelu <- mean(cvlossrelu) # Average the performance over the five folds
+cvsig <- mean(cvlosssig)
+print("ReLU performance")
+cvrelu
+print("Sigmoid performance")
+cvsig
+```
+
+CHUNK 12: A copy of CHUNK 11 for use with Exercise 3.4.1
+```{r}
+# Do not need to re-establish the folds or define the loss function
+
+cvlosstanh <- cvlosssig <- rep(NA, times = k) # Vectors to hold the results
+
+for (i in 1:k) {
+  cvitanh <- neuralnetwork(
+    X = x[fold != i, ], y = y[fold != i],
+    hidden.layers = 15, regression = FALSE,
+    standardize = TRUE, loss.type = "log",
+    activ.functions = "tanh", n.epochs = 30,
+    learn.rates = 1e-03, val.prop = 0,
+    random.seed = 1
+  ) # Fit a neural network using sigmoid to the observations that are not in fold i; using 20 epochs to save time. Note val.prop set to 0.
+
+  yprobstanh <- predict(cvitanh, x[fold == i, ])$probabilities[, 2] # Fitted values using ReLU
+  cvlosstanh[i] <- mean(mapply(logloss, y[fold == i], yprobstanh))
+}
+
+cvtanh <- mean(cvlosstanh) # Average the performance over the five folds
+print("Tanh performance")
+cvtanh
+```
+
+CHUNK 13: A copy of CHUNK 11 for use with Exercise 3.4.2. The number of epochs has been reduced to 20 to speed run time.
+```{r}
+# Do not need to re-establish the folds or define the loss function
+
+cvlossrelu <- cvlosssig <- rep(NA, times = k) # Vectors to hold the results
+
+for (i in 1:k) {
+  cvirelu <- neuralnetwork(
+    X = x[fold != i, ], y = y[fold != i],
+    hidden.layers = c(5,5), regression = FALSE,
+    standardize = TRUE, loss.type = "log",
+    activ.functions = "relu", n.epochs = 20,
+    learn.rates = 1e-03, val.prop = 0,
+    random.seed = 1
+  ) # Fit a neural network using ReLU to the observations that are not in fold i; using 20 epochs to save time. Note val.prop set to 0.
+
+  cvisig <- neuralnetwork(
+    X = x[fold != i, ], y = y[fold != i],
+    hidden.layers = 20, regression = FALSE,
+    standardize = TRUE, loss.type = "log",
+    activ.functions = "sigmoid", n.epochs = 20,
+    learn.rates = 1e-03, val.prop = 0,
+    random.seed = 1
+  ) # Fit a neural network using sigmoid to the observations that are not in fold i; using 20 epochs to save time. Note val.prop set to 0.
+
+  yprobsrelu <- predict(cvirelu, x[fold == i, ])$probabilities[, 2] # Fitted values using ReLU
+  yprobssig <- predict(cvisig, x[fold == i, ])$probabilities[, 2] # Fitted values using sigmoid
+  cvlossrelu[i] <- mean(mapply(logloss, y[fold == i], yprobsrelu))
+  cvlosssig[i] <- mean(mapply(logloss, y[fold == i], yprobssig))
+}
+
+cvrelu <- mean(cvlossrelu) # Average the performance over the five folds
+cvsig <- mean(cvlosssig)
+print("ReLU performance")
+cvrelu
+print("Sigmoid performance")
+cvsig
+```
+
+CHUNK 14: Neural network regression example
+```{r}
+rm(list = ls())
+set.seed(1)
+auto <- read.csv("Data/auto.csv", stringsAsFactors = TRUE)
+
+# Look at the data
+# str(auto) # Numeric predictors
+table(auto$cylinders) # Mostly 4, 6, and 8
+hist(auto$horsepower) # Seems reasonable
+table(auto$modelyear) # Looks like years from 1900s; standardizing the data is important
+hist(auto$weight) # Nothing looks abnormal
+pairs(auto) # Displacement, HP, and weight all look positively correlated
+
+# Split the data and train the network
+x <- auto
+x$mpg <- NULL
+y <- auto$mpg
+
+testind <- sample(dim(auto)[1], 40)
+
+mpgnet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 5, regression = TRUE,
+  standardize = TRUE, loss.type = "squared",
+  activ.functions = "relu", n.epochs = 200,
+  learn.rates = 1e-04, val.prop = 0.1 / 0.9,
+  random.seed = 1
+)
+
+plot(mpgnet)
+```
+
+CHUNK 15: Investigate various mini-batch sizes
+```{r}
+library(gridExtra)
+mpgnetb1 <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 5, regression = TRUE,
+  standardize = TRUE, loss.type = "squared",
+  activ.functions = "relu", n.epochs = 200,
+  learn.rates = 1e-04, val.prop = 0.1 / 0.9,
+  random.seed = 1, batch.size = 1
+)
+
+mpgnetb313 <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 5, regression = TRUE,
+  standardize = TRUE, loss.type = "squared",
+  activ.functions = "relu", n.epochs = 200,
+  learn.rates = 1e-04, val.prop = 0.1 / 0.9,
+  random.seed = 1, batch.size = 313
+)
+
+b1plot <- plot(mpgnetb1)
+b313plot <- plot(mpgnetb313)
+grid.arrange(b1plot, b313plot, ncol = 2)
+```
+
+CHUNK 16: Investigate different learning rates
+```{r}
+lrbig <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 5, regression = TRUE,
+  standardize = TRUE, loss.type = "squared",
+  activ.functions = "relu", n.epochs = 200,
+  learn.rates = 1e-01, val.prop = 0.1 / 0.9,
+  random.seed = 1
+)
+
+lrsmall <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 5, regression = TRUE,
+  standardize = TRUE, loss.type = "squared",
+  activ.functions = "relu", n.epochs = 200,
+  learn.rates = 1e-05, val.prop = 0.1 / 0.9,
+  random.seed = 1
+)
+
+lrbigplot <- plot(lrbig)
+lrsmallplot <- plot(lrsmall)
+grid.arrange(lrbigplot, lrsmallplot, ncol = 2)
+```
+
+CHUNK 17: Exercise 3.4.3
+```{r}
+df <- tibble(y = y[testind], 
+             predictions = predict(mpgnet, x[testind,])$predictions)
+ggplot(df) + 
+  geom_point(aes(x = predictions, y = y)) + 
+  theme(aspect.ratio = 1) + 
+  geom_abline(slope=1)
+
+```
+
+CHUNK 18: Exercise 3.4.3: Solution
+```{r}
+# Scatter plot of predicted values versus actual
+
+nnpreds <- predict(mpgnet, x[testind, ])$predictions
+plot(y[testind], nnpreds, ylim = c(10, 50), xlim = c(10, 50))
+lines(c(1, 50), c(1, 50), col = 4)
+
+# Overall, the predictions seem pretty good. The network seems to do better on the smaller values than the larger values (even on a relative basis). Just to aid visual inspection, the last line of code adds the line y=x to the plot. Ideally, the points should fall close to this line.
+```
+
+CHUNK 19: Prepare maternal risk data
+```{r}
+rm(list = ls())
+set.seed(1)
+risk <- read.csv("Data/maternal_risk.csv", stringsAsFactors = TRUE)
+
+# Look at the data
+str(risk) # One categorical predictor; others are quantitative
+sum(complete.cases(risk)) # Complete cases = number of observations, so no missing data
+summary(risk$Age) # Looks broadly reasonable, though further investigation of the extreme data points might be warranted
+hist(risk$BodyTemp) # Highly right-skewed, but seems OK
+boxplot(risk$HeartRate) # Two values of 7 seem impossible; remove these observations
+risk <- risk[risk$HeartRate > 10, ]
+
+# Split the test data
+testind <- sample(dim(risk)[1], 100)
+```
+
+CHUNK 20: Exercise 3.4.4
+```{r}
+
+
+```
+
+CHUNK 21: Exercise 3.4.4: Solution
+```{r}
+
+# Split predictors from target
+x <- risk
+x$Region <- x$RiskLevel <- NULL
+y <- risk$RiskLevel
+
+# Do OHE for categorical predictor
+Region_OHE <- class.ind(risk$Region)
+x <- cbind(Region_OHE, x)
+
+# Note: we don't need to do OHE on the target to fit the model with ANN2, but we'll need it to calculate the loss for the cross-validation.
+
+y_OHE <- class.ind(y)
+
+# Begin Cross-Validation
+
+k <- 5
+set.seed(1)
+fold <- createFolds(y, k = k, list = FALSE)
+
+crossloss <- function(y, yhat) apply(-y * log(yhat), 1, sum)
+
+# Can experiment with code below, using different activation functions and architectures
+
+cvlosses <- rep(NA, times = k)
+
+for (i in 1:k) {
+  cvi <- neuralnetwork(
+    X = x[fold != i, ], y = y[fold != i],
+    hidden.layers = 10, regression = FALSE,
+    standardize = TRUE, loss.type = "log",
+    activ.functions = "relu", n.epochs = 5000,
+    learn.rates = 1e-03, val.prop = 0,
+    random.seed = 1
+  )
+
+  yprobs <- predict(cvi, x[fold == i, ])$probabilities
+  cvlosses[i] <- mean(crossloss(y_OHE[fold == i, ], yprobs))
+}
+
+cvloss <- mean(cvlosses)
+cvloss
+
+# End Cross-Validation
+
+# Train model using final choices (ReLU and a single hidden layer of 7 neurons) and check for over/underfitting
+
+risknet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 7, regression = FALSE,
+  standardize = TRUE, loss.type = "log",
+  activ.functions = "relu", n.epochs = 5000,
+  learn.rates = 1e-03, val.prop = 0.1 / 0.9,
+  random.seed = 1
+)
+
+avglossbyepoch <- function(anet) {
+  n_epoch <- anet$Rcpp_ANN$getTrainHistory()$n_epoch
+  trainloss <- valloss <- rep(NA, times = n_epoch)
+  bpere <- max(which(anet$Rcpp_ANN$getTrainHistory()$epoch == 0))
+  trainloss <- matrix(
+    data = anet$Rcpp_ANN$getTrainHistory()$train_loss,
+    ncol = n_epoch, nrow = bpere
+  )
+  valloss <- matrix(
+    data = anet$Rcpp_ANN$getTrainHistory()$val_loss,
+    ncol = n_epoch, nrow = bpere
+  )
+  trainlossavg <- apply(trainloss, 2, mean)
+  vallossavg <- apply(valloss, 2, mean)
+  return(list(training = trainlossavg, validation = vallossavg))
+}
+
+losses <- avglossbyepoch(risknet)
+plot(losses$training,
+  type = "l", xlab = "Epoch", ylab = "Loss",
+  main = "Training and Validation Losses by Epoch",
+)
+
+lines(losses$validation, col = 2, lty = 2)
+legend("topright", legend = c("Training", "Validation"), col = c(1, 2), lty = c(1, 2))
+
+# Retrain for 1000 epochs
+
+risknet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 7, regression = FALSE,
+  standardize = TRUE, loss.type = "log",
+  activ.functions = "relu", n.epochs = 1000,
+  learn.rates = 1e-03, val.prop = 0.1 / 0.9,
+  random.seed = 1
+)
+
+losses <- avglossbyepoch(risknet)
+plot(losses$training,
+  type = "l", xlab = "Epoch", ylab = "Loss",
+  main = "Training and Validation Losses by Epoch",
+)
+
+lines(losses$validation, col = 2, lty = 2)
+legend("topright", legend = c("Training", "Validation"), col = c(1, 2), lty = c(1, 2))
+
+# Do predictions
+
+testpreds <- predict(risknet, x[testind, ])
+ypreds <- testpreds$predictions
+table(y[testind], ypreds)
+sum(y[testind] == ypreds) / 100 # Using accuracy as the measure on the test set.
+```
+
+CHUNK 22: Two predictions of maternal risk
+```{r}
+set.seed(1)
+risknet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 7, regression = FALSE,
+  standardize = TRUE, loss.type = "log",
+  activ.functions = "relu", n.epochs = 1000,
+  val.prop = 0.1 / 0.9, learn.rates = 1e-03,
+  random.seed = 1
+)
+
+# Do predictions
+testpreds <- predict(risknet, x[testind, ])
+testpreds$probabilities[c(31, 97), ]
+y[testind][c(31, 97)]
+```
+
+CHUNK 23: Exercise 3.4.5
+```{r}
+apply(testpreds$probabilities, 2, \(x) x > 0.25)[,1] & testpreds$predictions %in% c("low risk", "mid risk")
+```
+
+CHUNK 24: Exercise 3.4.5: Solution
+```{r}
+flagind <- which(testpreds$probabilities[, 1] > 0.25 & ypreds != "high risk")
+flagind
+table(y[testind[flagind]])
+# We find eight such cases; of these cases, three were actually high risk
+```
+
+CHUNK 25: Exercise 3.4.6
+```{r}
+avglossbyepoch <- function(anet) {
+  n_epoch <- anet$Rcpp_ANN$getTrainHistory()$n_epoch
+  trainloss <- valloss <- rep(NA, times = n_epoch)
+  bpere <- max(which(anet$Rcpp_ANN$getTrainHistory()$epoch == 0))
+  trainloss <- matrix(
+    data = anet$Rcpp_ANN$getTrainHistory()$train_loss,
+    ncol = n_epoch, nrow = bpere
+  )
+  valloss <- matrix(
+    data = anet$Rcpp_ANN$getTrainHistory()$val_loss,
+    ncol = n_epoch, nrow = bpere
+  )
+  trainlossavg <- apply(trainloss, 2, mean)
+  vallossavg <- apply(valloss, 2, mean)
+  return(list(training = trainlossavg, validation = vallossavg))
+}
+# Randomly split the data into 80/10/10 train/validate/test sets. Fit a neural network model using the MAE loss function. Determine good values of the model hyperparameters (i.e., network architecture and activation function) using 5-fold cross-validation.
+abalone <- read_csv("Data/abalone.csv")
+abalone <- cbind(abalone, class.ind(abalone$Sex))
+abalone$Sex <- NULL
+
+train_samp <- sample(1:nrow(abalone), size = round(0.1*nrow(abalone))) 
+abalone_train <- abalone[-train_samp, ]
+abalone_test <- abalone[train_samp, ]
+
+layers <- c(5, 15)
+activation <- c('relu', 'sigmoid')
+grid <- expand.grid(layers = layers, activation = activation)
+grid$activation <- as.character(grid$activation)
+
+loss_list <- list()
+
+k <- 5
+folds <- createFolds(abalone_train[,'Age'], k=k, list=FALSE)
+
+for (i in 1:nrow(grid)) {
+  for (f in 1:k) {
+    x_f <- abalone_train[folds == f,] %>% select(-c(Age))
+    y_f <- abalone_train[folds == f,] %>% select(Age)
+    abalonenet <- neuralnetwork(
+      X = x_f, 
+      y = y_f,
+      hidden.layers = c(grid[i,1], grid[i,1]), 
+      regression = TRUE,
+      standardize = TRUE, 
+      loss.type = "absolute",
+      activ.functions = grid[i,2], 
+      n.epochs = 2000,
+      val.prop = 0.1 / 0.9, 
+      learn.rates = 1e-03,
+      random.seed = 1
+    )
+    
+    preds <- predict(abalonenet, abalone_test %>% select(-c(Age)))$predictions
+    valLoss <- mean(abs(abalone_test[,'Age'] - preds))
+    losses <- avglossbyepoch(risknet)
+    loss_list[[paste0("Losses_", grid[i,1], "_", grid[i,2])]][[paste0("Fold_", f)]] <- list(valLoss, losses)
+  }
+
+}
+
+abalone_nn_valLoss <- lapply(loss_list, \(first_list) mean(unlist(lapply(first_list, \(li) li[[1]]))))
+#
+
+# Fit a linear regression model to the combined train and validate sets.
+abalone_lm <- lm(Age ~ ., abalone_train %>% select(-M))
+
+# Do predictions on the test set using both models and compare the two.
+abalone_preds <- predict(abalone_lm, abalone_test %>% select(-c(Age, M)))
+abalone_lm_valLoss <- mean(abs(abalone_test[,'Age'] - preds))
+names(abalone_lm_valLoss) <- "Losses_LM"
+
+abalone_nn_valLoss
+abalone_lm_valLoss
+```
+
+CHUNK 26: Exercise 3.4.6: Solution
+```{r}
+rm(list = ls())
+set.seed(1)
+abalone <- read.csv("abalone.csv", stringsAsFactors = TRUE)
+
+# Look at data
+str(abalone) # Mostly quantitative; "Sex" is categorical (will need to do OHE)
+hist(abalone$Age) # Target variable looks well-behaved
+boxplot(abalone$Length) # Nothing suspicious here
+boxplot(abalone$Height) # One substantial outlier
+
+# Split the data into test set
+
+x <- abalone
+x$Sex <- x$Age <- NULL
+y <- abalone$Age
+
+testind <- sample(dim(abalone)[1], 418)
+
+Sex_OHE <- class.ind(abalone$Sex)
+x <- cbind(Sex_OHE, x)
+
+# BEGIN CV
+
+library(caret)
+k <- 5
+set.seed(1)
+fold <- createFolds(y, k = k, list = FALSE)
+
+maeloss <- function(y, yhat) abs(y - yhat)
+
+cvlsig <- cvltanh <- cvlrelu <- rep(NA, times = k) # Vectors to hold the results
+
+# Can experiment with code below, using different numbers of layers and neurons
+
+for (i in 1:k) {
+  cvlosssig <- neuralnetwork(
+    X = x[fold != i, ], y = y[fold != i],
+    hidden.layers = c(10, 10), regression = TRUE,
+    standardize = TRUE, loss.type = "absolute",
+    activ.functions = "sigmoid", n.epochs = 2000,
+    val.prop = 0, random.seed = 1,
+    batch.size = 50, learn.rates = 1e-03
+  )
+
+  cvlosstanh <- neuralnetwork(
+    X = x[fold != i, ], y = y[fold != i],
+    hidden.layers = c(10, 10), regression = TRUE,
+    standardize = TRUE, loss.type = "absolute",
+    activ.functions = "tanh", n.epochs = 2000,
+    val.prop = 0, random.seed = 1,
+    batch.size = 50, learn.rates = 1e-03
+  )
+
+  cvlossrelu <- neuralnetwork(
+    X = x[fold != i, ], y = y[fold != i],
+    hidden.layers = c(10, 10), regression = TRUE,
+    standardize = TRUE, loss.type = "absolute",
+    activ.functions = "relu", n.epochs = 2000,
+    val.prop = 0, random.seed = 1,
+    batch.size = 50, learn.rates = 1e-03
+  )
+
+
+  ypredssig <- predict(cvlosssig, x[fold == i, ])$predictions
+  ypredstanh <- predict(cvlosstanh, x[fold == i, ])$predictions
+  ypredsrelu <- predict(cvlossrelu, x[fold == i, ])$predictions
+  cvlsig[i] <- mean(maeloss(y[fold == i], ypredssig))
+  cvltanh[i] <- mean(maeloss(y[fold == i], ypredstanh))
+  cvlrelu[i] <- mean(maeloss(y[fold == i], ypredsrelu))
+}
+
+cvrelu <- mean(cvlrelu)
+cvsig <- mean(cvlsig)
+cvtanh <- mean(cvltanh)
+
+# Print results, for first print statement put in relevant hyperparameters
+print("10 10 hidden layers")
+print("reLU")
+cvrelu
+print("sigmoid")
+cvsig
+print("tanh")
+cvtanh
+# END CV
+
+set.seed(1)
+
+# Fit network using chosen configuration
+abalonenet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 7, regression = TRUE,
+  standardize = TRUE, loss.type = "absolute",
+  activ.functions = "sigmoid", n.epochs = 2000,
+  val.prop = 0.1 / 0.9, random.seed = 1,
+  batch.size = 50, learn.rates = 1e-03
+)
+
+avglossbyepoch <- function(anet) {
+  n_epoch <- anet$Rcpp_ANN$getTrainHistory()$n_epoch
+  trainloss <- valloss <- rep(NA, times = n_epoch)
+  bpere <- max(which(anet$Rcpp_ANN$getTrainHistory()$epoch == 0))
+  trainloss <- matrix(
+    data = anet$Rcpp_ANN$getTrainHistory()$train_loss,
+    ncol = n_epoch, nrow = bpere
+  )
+  valloss <- matrix(
+    data = anet$Rcpp_ANN$getTrainHistory()$val_loss,
+    ncol = n_epoch, nrow = bpere
+  )
+  trainlossavg <- apply(trainloss, 2, mean)
+  vallossavg <- apply(valloss, 2, mean)
+  return(list(training = trainlossavg, validation = vallossavg))
+}
+
+abaloneloss <- avglossbyepoch(abalonenet)
+
+# Check for overfitting or underfitting
+plot(abaloneloss$training,
+  type = "l", xlab = "Epoch", ylab = "Loss",
+  main = "MAE Training and Validation Losses by Epoch",
+  ylim = c(0.35, 0.6)
+)
+lines(abaloneloss$validation, col = 2, lty = 2)
+legend("topright", legend = c("Training", "Validation"), col = c(1, 2), lty = c(1, 2))
+
+# Some overfitting detected -- retrain for 1000 epochs
+
+abalonenet <- neuralnetwork(
+  X = x[-testind, ], y = y[-testind],
+  hidden.layers = 7, regression = TRUE,
+  standardize = TRUE, loss.type = "absolute",
+  activ.functions = "sigmoid", n.epochs = 1000,
+  val.prop = 0.1 / 0.9, random.seed = 1,
+  batch.size = 50, learn.rates = 1e-03
+)
+
+# Fit linear model
+abalonelm <- lm(Age ~ ., data = abalone[-testind, ])
+summary(abalonelm)
+
+# Do predictions and assess accuracy
+
+netpreds <- predict(abalonenet, x[testind, ])$predictions
+lmpreds <- predict(abalonelm, abalone[testind, ])
+
+mean(maeloss(netpreds, y[testind]))
+mean(maeloss(lmpreds, y[testind]))
+
+# Plot predictions for both models
+plot(y[testind], netpreds, xlim = c(0, 25), ylim = c(0, 25), xlab = "Actual Age", ylab = "Predicted Age")
+points(y[testind], lmpreds, col = 2, pch = 2)
+legend("topleft", legend = c("Neural Network", "Linear Model"), col = c(1, 2), pch = c(1, 2), bty = "n")
+lines(c(1, 25), c(1, 25), col = 4)
+```

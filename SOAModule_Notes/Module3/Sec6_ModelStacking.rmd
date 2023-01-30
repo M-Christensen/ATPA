@@ -1,0 +1,293 @@
+---
+title: "ATPA: Stacking"
+---
+
+CHUNK 1: Hotel stacking example
+```{r}
+library(tidyverse)
+library(ANN2)
+library(nnet)
+library(rpart)
+
+
+set.seed(1000)
+
+# Load the data and create a new variable that reflects total stay length
+HotelData_tmp <- read_csv("hotel_bookings_small.csv") %>%
+  mutate(total_stay = stays_in_week_nights + stays_in_weekend_nights) %>%
+  mutate(LMPred = NA, RTPred = NA, NNPred = NA) # Add columns for the three model predictions
+
+# One-hot encode market segment and split the data into 6 folds by assigning set = 1, 2, 3, 4, 5, or 6 for each observation
+HotelData <- cbind(HotelData_tmp, class.ind(HotelData_tmp$market_segment)) %>%
+  mutate(set = sample(1:6, nrow(HotelData_tmp), replace = TRUE)) # Divide the data into 5 CV folds and a test set (#6)
+
+
+HotelTrain <- HotelData %>%
+  filter(set < 6) # Remove the test set
+
+HotelTest <- HotelData %>%
+  filter(set == 6)
+```
+
+CHUNK 2: Fit the models
+```{r}
+# The loop allows each fold to be held out in turn. Note that variable names with spaces in them are enclosed in back ticks. This is also used for other characters, like slashes, in variable names.
+# The predictions are then added to the data frame that holds the training data.
+for (holdout in 1:5) {
+
+  # Model 1 - Linear Regression
+  LMFit <- lm(adr ~ total_stay + lead_time + adults + Complimentary + Corporate + Direct + Groups + `Offline TA/TO` + `Online TA`, data = HotelTrain, subset = set != holdout)
+  HotelTrain$LMPred[HotelTrain$set == holdout] <- predict(LMFit, newdata = HotelTrain %>% filter(set == holdout))
+
+  # Model 2 - Regression Tree
+  RTFit <- rpart(adr ~ total_stay + lead_time + adults + Aviation + Complimentary + Corporate + Direct + Groups + `Offline TA/TO` + `Online TA`, data = HotelTrain, subset = set != holdout, method = "anova")
+  HotelTrain$RTPred[HotelTrain$set == holdout] <- predict(RTFit, newdata = HotelTrain %>% filter(set == holdout))
+
+  # Model 3 - Neural Net
+  NNFit <- neuralnetwork(
+    X = HotelTrain %>%
+      filter(set != holdout) %>%
+      select(total_stay, lead_time, adults, Aviation, Complimentary, Corporate, Direct, Groups, `Offline TA/TO`, `Online TA`),
+    y = HotelTrain %>%
+      filter(set != holdout) %>%
+      select(adr),
+    hidden.layers = 10, # There is one hidden layer with 10 neurons, for two layers with say 10 and 5 neurons use c(10, 5)
+    regression = TRUE, # Treat as a regression problem
+    standardize = TRUE, # Standardize all variables
+    loss.type = "squared", # Squared loss is used
+    activ.functions = "relu", # ReLU activation function
+    learn.rates = 0.01, # To speed convergence
+    n.epochs = 1000, # Length of network training
+    val.prop = 0.1 / 0.9, # Use (1/9)*4500 = 500 for validation
+    random.seed = 1 # resets the seed just for this function
+  )
+  HotelTrain$NNPred[HotelTrain$set == holdout] <-
+    predict(NNFit,
+      newdata = HotelTrain %>%
+        filter(set == holdout) %>%
+        select(total_stay, lead_time, adults, Aviation, Complimentary, Corporate, Direct, Groups, `Offline TA/TO`, `Online TA`)
+    )$predictions
+}
+```
+
+CHUNK 3: Fit the meta-models
+```{r}
+meta1 <- lm(adr ~ LMPred + RTPred + NNPred, data = HotelTrain)
+meta2 <- lm(adr ~ LMPred + RTPred + NNPred + total_stay + lead_time + adults + market_segment, data = HotelTrain)
+summary(meta1)
+summary(meta2)
+```
+
+CHUNK 4: Compare the models 
+```{r}
+# For using the stacked model to make predictions, the first step is refit the stage-0 models on the full training set
+
+  # Model 1 - Linear Regression
+  LMFit <- lm(adr ~ total_stay + lead_time + adults + Complimentary + Corporate + Direct + Groups + `Offline TA/TO` + `Online TA`, data = HotelTrain)
+  
+  # Model 2 - Regression Tree
+  RTFit <- rpart(adr ~ total_stay + lead_time + adults + Aviation + Complimentary + Corporate + Direct + Groups + `Offline TA/TO` + `Online TA`, data = HotelTrain, method = "anova")
+  
+  # Model 3 - Neural Net
+  NNFit <- neuralnetwork(
+    X = HotelTrain %>%
+       select(total_stay, lead_time, adults, Aviation, Complimentary, Corporate, Direct, Groups, `Offline TA/TO`, `Online TA`),
+    y = HotelTrain %>%
+       select(adr),
+    hidden.layers = 10, # There is one hidden layer with 10 neurons, for two layers with say 10 and 5 neurons use c(10, 5)
+    regression = TRUE, # Treat as a regression problem
+    standardize = TRUE, # Standardize all variables
+    loss.type = "squared", # Squared loss is used
+    activ.functions = "relu", # ReLU activation function
+    learn.rates = 0.01, # To speed convergence
+    n.epochs = 1000, # Length of network training
+    val.prop = 0.1 / 0.9, # Use (1/9)*4500 = 500 for validation
+    random.seed = 1 # resets the seed just for this function
+  )
+  
+# Add predictions from the stage-0 models to the test set
+HotelTest$LMPred <- predict(LMFit, newdata = HotelTest)
+HotelTest$RTPred <- predict(RTFit, newdata = HotelTest)
+HotelTest$NNPred <-
+  as.numeric(predict(NNFit,
+    newdata = HotelTest %>%
+      select(total_stay, lead_time, adults, Aviation, Complimentary, Corporate, Direct, Groups, `Offline TA/TO`, `Online TA`)
+  )$predictions)
+
+# Add predictions for the two meta-models
+HotelTest$meta1 <- predict(meta1, newdata = HotelTest)
+HotelTest$meta2 <- predict(meta2, newdata = HotelTest)
+
+# Fit a null model for comparison
+HotelTest$null <- mean(HotelTrain$adr)
+
+# Obtain the errors and then the mean square errors
+HotelTest %>%
+  mutate(
+    errorNull = null - adr,
+    errorLM = LMPred - adr,
+    errorRT = RTPred - adr,
+    errorNN = NNPred - adr,
+    errorMeta1 = meta1 - adr,
+    errorMeta2 = meta2 - adr
+  ) %>%
+  summarize(
+    RMSENull = sqrt(mean(errorNull^2)),
+    RMSELM = sqrt(mean(errorLM^2)),
+    RMSERT = sqrt(mean(errorRT^2)),
+    RMSENN = sqrt(mean(errorNN^2)),
+    RMSEMeta1 = sqrt(mean(errorMeta1^2)),
+    RMSEMeta2 = sqrt(mean(errorMeta2^2))
+  )
+```
+
+CHUNK 5: Meta-model summaries
+```{r}
+summary(meta1)
+summary(meta2)
+```
+
+CHUNK 6: Exercise 3.6.1
+```{r}
+set.seed(1234)
+
+HotelData_tmp <- read_csv("hotel_bookings_small.csv") %>%
+  mutate(total_stay = stays_in_week_nights + stays_in_weekend_nights) %>%
+  mutate(GLMPred = NA, RTPred = NA, NNPred = NA) # Add columns for the four model predictions
+
+HotelData <- cbind(HotelData_tmp, class.ind(HotelData_tmp$market_segment)) %>%
+  mutate(set = sample(1:6, nrow(HotelData_tmp), replace = TRUE)) # Divide the data into 5 CV folds and a test set (#6)
+
+
+HotelTrain <- HotelData %>%
+  filter(set < 6) # Remove the test set
+
+HotelTest <- HotelData %>%
+  filter(set == 6)
+
+
+```
+
+CHUNK 7: Exercise 3.6.1: Solution
+```{r}
+
+set.seed(1234)
+
+HotelData_tmp <- read_csv("hotel_bookings_small.csv") %>%
+  mutate(total_stay = stays_in_week_nights + stays_in_weekend_nights) %>%
+  mutate(GLMPred = NA, RTPred = NA, NNPred = NA) # Add columns for the four model predictions
+
+HotelData <- cbind(HotelData_tmp, class.ind(HotelData_tmp$market_segment)) %>%
+  mutate(set = sample(1:6, nrow(HotelData_tmp), replace = TRUE)) # Divide the data into 5 CV folds and a test set (#6)
+
+
+HotelTrain <- HotelData %>%
+  filter(set < 6) # Remove the test set
+
+HotelTest <- HotelData %>%
+  filter(set == 6)
+
+
+for (holdout in 1:5) {
+
+  # Model 1 - Logistic Regression
+  GLMFit <- glm(is_canceled ~ adr + total_stay + lead_time + adults + Complimentary + Corporate + Direct + Groups + `Offline TA/TO` + `Online TA`, data = HotelTrain, subset = set != holdout, family = "binomial")
+  HotelTrain$GLMPred[HotelTrain$set == holdout] <- predict(GLMFit, newdata = HotelTrain %>% filter(set == holdout), type = "response")
+
+  # Model 2 - Decision Tree
+  CTFit <- rpart(is_canceled ~ adr + total_stay + lead_time + adults + Aviation + Complimentary + Corporate + Direct + Groups + `Offline TA/TO` + `Online TA`, data = HotelTrain, subset = set != holdout, method = "class")
+  HotelTrain$CTPred[HotelTrain$set == holdout] <- predict(CTFit, newdata = HotelTrain %>% filter(set == holdout))[, "1"]
+
+  # Model 3 - Neural Net
+  NNFit <- neuralnetwork(
+    X = HotelTrain %>%
+      filter(set != holdout) %>%
+      select(adr, total_stay, lead_time, adults, Aviation, Complimentary, Corporate, Direct, Groups, `Offline TA/TO`, `Online TA`),
+    y = HotelTrain %>%
+      filter(set != holdout) %>%
+      select(is_canceled),
+    hidden.layers = 10, # There is one hidden layer with 10 neurons, for two layers with say 10 and 5 neurons use c(10, 5)
+    regression = FALSE, # Treat as a classification problem
+    standardize = TRUE, # Standardize all variables
+    loss.type = "log", # log loss is used
+    activ.functions = "relu", # ReLU activation function
+    learn.rates = 0.01, # To speed convergence
+    n.epochs = 1000, # Length of network training
+    val.prop = 0.1 / 0.9, # Use (1/9)*4500 = 500 for validation
+    random.seed = 1 # resets the seed just for this function
+  )
+  HotelTrain$NNPred[HotelTrain$set == holdout] <-
+    predict(NNFit,
+      newdata = HotelTrain
+      %>% filter(set == holdout)
+        %>% select(adr, total_stay, lead_time, adults, Aviation, Complimentary, Corporate, Direct, Groups, `Offline TA/TO`, `Online TA`)
+    )$probabilities[, "class_1"]
+}
+
+meta1 <- glm(is_canceled ~ GLMPred + CTPred + NNPred, data = HotelTrain, family = "binomial")
+meta2 <- glm(is_canceled ~ GLMPred + CTPred + NNPred + adr + total_stay + lead_time + adults + market_segment, data = HotelTrain, family = "binomial")
+
+ # Model 1 - Logistic Regression
+  GLMFit <- glm(is_canceled ~ adr + total_stay + lead_time + adults + Complimentary + Corporate + Direct + Groups + `Offline TA/TO` + `Online TA`, data = HotelTrain, family = "binomial")
+  
+  # Model 2 - Decision Tree
+  CTFit <- rpart(is_canceled ~ adr + total_stay + lead_time + adults + Aviation + Complimentary + Corporate + Direct + Groups + `Offline TA/TO` + `Online TA`, data = HotelTrain, method = "class")
+ 
+  # Model 3 - Neural Net
+  NNFit <- neuralnetwork(
+    X = HotelTrain %>%
+      select(adr, total_stay, lead_time, adults, Aviation, Complimentary, Corporate, Direct, Groups, `Offline TA/TO`, `Online TA`),
+    y = HotelTrain %>%
+      select(is_canceled),
+    hidden.layers = 10, # There is one hidden layer with 10 neurons, for two layers with say 10 and 5 neurons use c(10, 5)
+    regression = FALSE, # Treat as a classification problem
+    standardize = TRUE, # Standardize all variables
+    loss.type = "log", # log loss is used
+    activ.functions = "relu", # ReLU activation function
+    learn.rates = 0.01, # To speed convergence
+    n.epochs = 1000, # Length of network training
+    val.prop = 0.1 / 0.9, # Use (1/9)*4500 = 500 for validation
+    random.seed = 1 # resets the seed just for this function
+  )
+  
+HotelTest$GLMPred <- predict(GLMFit, newdata = HotelTest, type = "response")
+HotelTest$CTPred <- predict(CTFit, newdata = HotelTest)[, "1"]
+HotelTest$NNPred <- predict(NNFit,
+  newdata = HotelTest %>%
+    select(adr, total_stay, lead_time, adults, Aviation, Complimentary, Corporate, Direct, Groups, `Offline TA/TO`, `Online TA`)
+)$probabilities[, "class_1"]
+
+HotelTest$meta1 <- predict(meta1, newdata = HotelTest, type = "response")
+HotelTest$meta2 <- predict(meta2, newdata = HotelTest, type = "response")
+
+log_loss <- function(pred, actual) -log(pred^actual * (1 - pred)^(1 - actual)) # Provides the log loss. Equals the negative log of the predicted probability if the actual is one, or -log(1-predicted probability) is the actual is 0.
+
+HotelTest$nullPred <- mean(HotelTrain$is_canceled)
+
+HotelTest %>%
+  mutate(
+    loglossNull = log_loss(nullPred, is_canceled),
+    loglossGLM = log_loss(GLMPred, is_canceled),
+    loglossCT = log_loss(CTPred, is_canceled),
+    loglossNN = log_loss(NNPred, is_canceled),
+    loglossmeta1 = log_loss(meta1, is_canceled),
+    loglossmeta2 = log_loss(meta2, is_canceled)
+  ) %>%
+  summarize(
+    LLNull = mean(loglossNull),
+    LLGLM = mean(loglossGLM),
+    LLCT = mean(loglossCT),
+    LLNN = mean(loglossNN),
+    LLmeta1 = mean(loglossmeta1),
+    LLmeta2 = mean(loglossmeta2)
+  )
+
+summary(meta1)
+
+
+meta3 <- glm(is_canceled ~ GLMPred + NNPred, data = HotelTrain, family = "binomial")
+HotelTest$meta3 <- predict(meta3, newdata = HotelTest, type = "response")
+HotelTest %>%
+  mutate(loglossmeta3 = log_loss(meta3, is_canceled)) %>%
+  summarize(LLmeta3 = mean(loglossmeta3))
+```

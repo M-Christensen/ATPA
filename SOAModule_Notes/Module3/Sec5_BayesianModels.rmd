@@ -1,0 +1,294 @@
+---
+title: "ATPA: Bayesian Methods"
+---
+
+CHUNK 1: Fit the Poisson-gamma Model in Stan
+```{r}
+library(rstan)
+library(tidyverse)
+library(brms)
+options(mc.cores = parallel::detectCores()) # Make use of multiple cores if available
+# rstan_options(auto_write = TRUE) # If the Stan model does not change, don't recompile
+
+
+set.seed(1234)
+Pois_data <- rpois(500, 3) # Generate Poisson Data
+mean(Pois_data)
+
+fit <- stan(file = "Sec5_poisson_gamma.stan", 
+            data = list(y = Pois_data, 
+                        N = length(Pois_data)), 
+            iter = 10000, seed = 10) # Fit the model in Stan, adjust the path to the .stan file if it is not in your working directory
+traceplot(fit)
+print(fit)
+```
+
+CHUNK 2: Compare posterior distribution from MCMC to exact 
+```{r}
+# Get Stan output as a data frame
+pg_out <- as.data.frame(fit)
+# Get true posterior gamma parameters
+alpha <- sum(Pois_data) + 2
+beta <- length(Pois_data) + 1 / 4
+print("true posterior mean")
+alpha / beta
+# Generate points from the true posterior distribution
+x_values <- seq(from = 2.6, to = 3.4, by = 0.0001)
+true_dist <- data.frame("x" = x_values, "true" = dgamma(x_values, shape = alpha, rate = beta))
+
+plot <- ggplot(data = pg_out, aes(x = lambda)) +
+  geom_density(aes(color = "Stan posterior"), size = 1.3) +
+  geom_line(data = true_dist, aes(x = x, y = true, color = "True posterior"), size = 1.3) +
+  ylab("density") +
+  scale_color_manual("", breaks = c("Stan posterior", "True posterior"), values = c("#E69F00", "#56B4E9"))
+plot
+```
+
+CHUNK 3: Exercise 3.5.1
+```{r}
+x_values <- seq(from = 2.6, to = 3.4, by = 0.0001)
+true_dist <- data.frame("x" = x_values, "true" = dgamma(x_values, shape = 2, rate = 1/4))
+
+plot_prior <- ggplot(data = pg_out, aes(x = lambda)) +
+  geom_density(aes(color = "Stan posterior"), size = 1.3) +
+  geom_line(data = true_dist, aes(x = x, y = true*4000, color = "True posterior"), size = 1.3) +
+  ylab("density") +
+  scale_color_manual("", breaks = c("Stan posterior", "Prior"), values = c("#E69F00", "#56B4E9"))
+fit2 <- stan(file = "Sec5_poisson_gamma.stan", 
+            data = list(y = Pois_data[1:5], 
+                        N = 5), 
+            iter = 10000, seed = 10)
+fit3 <- stan(file = "Sec5_poisson_gamma.stan", 
+            data = list(y = Pois_data[51:100], 
+                        N = 50), 
+            iter = 10000, seed = 10)
+
+plot_prior2 <- ggplot(data = as.data.frame(fit2), aes(x = lambda)) +
+  geom_density(aes(color = "Stan posterior"), size = 1.3) +
+  geom_line(data = true_dist, aes(x = x, y = true, color = "True posterior"), size = 1.3) +
+  ylab("density") +
+  scale_color_manual("", breaks = c("Stan posterior", "Prior"), values = c("#E69F00", "#56B4E9"))
+
+plot_prior3 <- ggplot(data = as.data.frame(fit3), aes(x = lambda)) +
+  geom_density(aes(color = "Stan posterior"), size = 1.3) +
+  geom_line(data = true_dist, aes(x = x, y = true, color = "True posterior"), size = 1.3) +
+  ylab("density") +
+  scale_color_manual("", breaks = c("Stan posterior", "Prior"), values = c("#E69F00", "#56B4E9"))
+
+
+plot_prior
+plot_prior2
+plot_prior3
+```
+
+CHUNK 4: Exercise 3.5.1 Solution
+```{r}
+rm(list = ls())
+set.seed(1234)
+Pois_data_all <- rpois(500, 3) # Generate Poisson Data
+
+fit5 <- stan(file = "Sec5_poisson_gamma.stan", data = list(y = Pois_data_all[1:5], N = 5), iter = 10000, seed = 10) # Fit model using only the first 5 observations
+fit5post <- as.data.frame(fit5)
+fit50 <- stan(file = "Sec5_poisson_gamma.stan", data = list(y = Pois_data_all[1:50], N = 50), iter = 10000, seed = 100) # Fit model using only the first 50 observations
+fit50post <- as.data.frame(fit50)
+fit500 <- stan(file = "Sec5_poisson_gamma.stan", data = list(y = Pois_data_all, N = 500), iter = 10000, seed = 1000) # Fit model using all 500 observations
+fit500post <- as.data.frame(fit500)
+
+x_values <- seq(0.01, 10, by = 0.0001)
+
+# Get prior gamma parameters
+alpha <- 2
+beta <- 1 / 4
+# Generate points from the prior distribution
+prior_dist <- data.frame("x" = x_values, "prior" = dgamma(x_values, shape = alpha, rate = beta))
+
+plot <- ggplot(data = fit5post, aes(x = lambda)) +
+  geom_density(aes(color = "Stan n=5"), size = 1.3) +
+  geom_density(data = fit50post, aes(x = lambda, color = "Stan n=50"), size = 1.3) +
+  geom_density(data = fit500post, aes(x = lambda, color = "Stan n=500"), size = 1.3) +
+  geom_line(data = prior_dist, aes(x = x, y = prior, color = "Prior"), size = 1.3) +
+  ylab("density") +
+  xlab("lambda") +
+  scale_color_manual("", breaks = c("Stan n=5", "Stan n=50", "Stan n=500", "Prior"), values = c("#E69F00", "#56B4E9", "#009E73", "#F0E442"))
+plot
+```
+
+CHUNK 5:  Regression Example
+```{r}
+set.seed(1234)
+N <- 10000 # Sample size
+
+# Generate the explanatory variables
+x1 <- rnorm(N)
+x2 <- rnorm(N)
+x3 <- rnorm(N)
+x4 <- rnorm(N)
+x5 <- rnorm(N)
+x6 <- rnorm(N)
+x7 <- rnorm(N)
+x8 <- rnorm(N)
+x9 <- rnorm(N)
+x10 <- rnorm(N)
+
+y <- 3 + 2 * x1 + 4 * x2 + rnorm(N, 0, 3) # Generate the response variables, only dependent on x1 and x2
+
+data_mat <- tibble(y, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10)
+
+fit10 <- brm(y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10, data = data_mat, seed = 10)
+fit6 <- brm(y ~ x1 + x2 + x3 + x4 + x5 + x6, data = data_mat, seed = 20)
+fit2 <- brm(y ~ x1 + x2, data = data_mat, seed = 30)
+
+summary(fit10)
+summary(fit6)
+summary(fit2)
+```
+
+CHUNK 6: Model Checking
+```{r}
+
+plot(fit10, ask = FALSE) # Show the posterior densities and trace plots. ask = FALSE produces all the plots at once.
+plot(conditional_effects(fit10), ask = FALSE) # Show the relationship of each of the predictors and Y.
+```
+
+CHUNK 7: Cross validation to compare the three models
+```{r}
+loo(fit10, fit6, fit2)
+```
+
+CHUNK 8: Horseshoe prior
+```{r}
+
+fit10H <- brm(y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10, data = data_mat, prior = set_prior("horseshoe(3)"), seed = 1000)
+
+summary(fit10)
+summary(fit10H)
+```
+
+CHUNK 9: Cross validation on the new model
+```{r}
+
+loo(fit10H)
+```
+
+CHUNK 10: Prediction
+```{r}
+
+set.seed(1234)
+
+predict(fit2, newdata = data_mat[1, ])
+predict(fit2, newdata = data_mat[1, ], summary=FALSE)
+fit2freq <- lm(y ~ x1 + x2, data = data_mat)
+predict(fit2freq, newdata = data_mat[1, ], interval = "predict")
+
+predictions <- data.frame(predictions = predict(fit2, newdata = data_mat[1, ], summary = FALSE)) # This vector uses the sampled posterior values to generate a random prediction from the fitted model using those posterior parameter values. These are predictions for the x-values for the first observation.
+
+ggplot(data = predictions, aes(predictions)) +
+  geom_density() # The distribution of predicted values for a future observations with the x-values from the first observation.
+
+all_preds <- predict(fit2, newdata = data_mat, summary = FALSE)
+sum_pred <- data.frame(Sum_Predictions = apply(all_preds, 1, sum))
+ggplot(sum_pred, aes(x = Sum_Predictions)) +
+  geom_density() +
+  geom_vline(xintercept = sum(predict(fit2freq, newdata = data_mat))) # The distribution of predicted values for the sum of future observations from the same set of predictors
+```
+
+CHUNK 11: Count GLM Example
+```{r}
+# Count Data
+library(caret)
+options(mc.cores = parallel::detectCores()-1) # Make use of multiple cores if available
+
+freq <- read.csv(file = "Data/fremtpl2freq.csv", stringsAsFactors = TRUE)
+
+head(freq)
+
+# Split data into two sets of 3000 observations each
+
+set.seed(2000)
+
+training.indices <- createDataPartition(freq$ClaimNb, p = 3000 / nrow(freq), list = FALSE, times = 2)
+freq_train <- freq[training.indices[, 1], ]
+freq_test <- freq[training.indices[, 2], ]
+rm(freq)
+
+count_fitP <- brm(ClaimNb ~ offset(log(Exposure)) + VehAge + DrivAge, data = freq_train, family = "poisson", save_pars = save_pars(all = TRUE), seed = 10)
+count_fitNB <- brm(ClaimNb ~ offset(log(Exposure)) + VehAge + DrivAge, data = freq_train, family = "negbinomial", save_pars = save_pars(all = TRUE), seed = 100)
+count_fitZIP <- brm(ClaimNb ~ offset(log(Exposure)) + VehAge + DrivAge, data = freq_train, family = "zero_inflated_poisson", save_pars = save_pars(all = TRUE), seed = 1000)
+count_fitZINB <- brm(ClaimNb ~ offset(log(Exposure)) + VehAge + DrivAge, data = freq_train, family = "zero_inflated_negbinomial", save_pars = save_pars(all = TRUE), seed = 10000)
+
+loo(count_fitP, count_fitNB, count_fitZIP, count_fitZINB)
+
+summary(count_fitZINB)
+```
+
+CHUNK 12: Count Example Prediction
+```{r}
+
+count_predictions <- predict(count_fitZINB, newdata = freq_test, summary = FALSE)
+
+sum_count_predictions <- data.frame(Total_Claims = apply(count_predictions, 1, sum))
+
+ggplot(sum_count_predictions, aes(x = Total_Claims)) +
+  geom_density()
+```
+
+CHUNK 13: Model Evaluation
+```{r}
+# For each observation in the test set, the prediction is the mean of the posterior predictions
+post_means <- data.frame(post_mean = apply(count_predictions, 2, mean)) # Using "2" averages over the 4000 posterior values for a given observation
+MSE <- sum((freq_test$ClaimNb - post_means)^2) / nrow(freq_test)
+MSE
+```
+
+CHUNK 14: Exercise 3.5.2
+```{r}
+freq <- read.csv(file = "Data/fremtpl2freq.csv", stringsAsFactors = TRUE)
+sev <- read.csv(file = "Data/fremtpl2sev.csv", stringsAsFactors = TRUE)
+
+set.seed(1000)
+
+freq %>% head(3)
+sev %>% head(3)
+
+sev2 <- left_join(sev, freq, by="IDpol")
+
+sev_excat <- sev2 %>% filter(ClaimAmount <= 25000)
+
+sev_excat_samp <- sev_excat[sample(1:nrow(sev_excat), size = 250),]
+
+sev_fit <- brm(ClaimAmount ~ offset(Exposure) + ClaimNb + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Area + Density + Region, data = sev_excat_samp, 
+               family = "normal", save_pars = save_pars(all = TRUE), seed = 10)
+```
+
+CHUNK 15: Exercise 3.5.2: Solution
+```{r}
+library(tidyverse)
+library(brms)
+options(mc.cores = parallel::detectCores()) # Make use of multiple cores if available
+
+freq <- read.csv(file = "fremtpl2freq.csv", stringsAsFactors = TRUE)
+sev <- read.csv(file = "fremtpl2sev.csv", stringsAsFactors = TRUE)
+
+set.seed(1000)
+
+full_sev_withNA <- left_join(sev, freq, by = "IDpol") # Make sure that the severity dataset is first to keep all of the severity records
+
+# Remove cases with no predictor variable, remove claims >= 25,000, and sample 3000 of the the records.
+full_sev <- full_sev_withNA %>%
+  drop_na() %>%
+  filter(ClaimAmount < 25000) %>%
+  slice_sample(n = 3000)
+
+GammaFit <- brm(ClaimAmount ~ VehAge + DrivAge, data = full_sev, family = "Gamma", save_pars = save_pars(all = TRUE), seed = 1000)
+LogNFit <- brm(ClaimAmount ~ VehAge + DrivAge, data = full_sev, family = "lognormal", save_pars = save_pars(all = TRUE), seed = 10000)
+
+loo(GammaFit, LogNFit)
+
+summary(GammaFit)
+
+GammaNoPredFit <- brm(ClaimAmount ~ 1, data = full_sev, family = "Gamma", save_pars = save_pars(all = TRUE), seed = 100000)
+
+LogNNoPredFit <- brm(ClaimAmount ~ 1, data = full_sev, family = "lognormal", save_pars = save_pars(all = TRUE), seed = 10)
+
+loo(GammaFit, LogNFit, GammaNoPredFit, LogNNoPredFit)
+```
