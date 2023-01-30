@@ -1,0 +1,119 @@
+---
+title: "ATPA: Predictions with missing data"
+---
+
+
+CHUNK 1: Read in data
+```{r}
+library(tidyverse)
+
+ckd <- read_csv("Data/ckd.csv")
+
+# Convert strings to factors for use with the mice package
+ckd$Appetite <- factor(ckd$Appetite)
+
+# Explore the data
+summary(ckd)
+ckd %>%
+  mutate(has_disease = ifelse(Chronic_Kidney_Disease == 0, "No Disease", "Has Disease")) %>%
+  ggplot(aes(x = has_disease, y = Age)) +
+  geom_boxplot(aes(group = has_disease)) +
+  xlab("")
+```
+
+CHUNK 2: Impute on full data
+```{r}
+
+library(mice)
+
+# Check if number of missing values is similar in test and train
+train <- ckd[ckd$set == "train", ]
+test <- ckd[ckd$set == "test", ]
+mean(is.na(train$Age))
+mean(is.na(test$Age))
+
+# Remove target and train/test identifier
+model_predictors <- ckd[, -c(6:7)]
+
+# Impute missing values
+imp_full <- mice(model_predictors, method = "norm.predict", m = 1, maxit = 1)
+ckd_imputed_full <- complete(imp_full) %>% mutate(Age = round(Age))
+```
+
+CHUNK 3: Fit model on fully imputed data
+```{r}
+# Add in target variable for model building
+ckd_imputed_full$Chronic_Kidney_Disease <- ckd$Chronic_Kidney_Disease
+
+train_full <- ckd_imputed_full[ckd$set == "train", ]
+test_full <- ckd_imputed_full[ckd$set == "test", ]
+
+# Build model on train and obtain predictions on test
+mod1 <- glm(Chronic_Kidney_Disease ~ ., data = train_full, family = binomial(link = "logit"))
+
+pred1 <- predict(mod1, newdata = test_full, type = "response")
+```
+
+CHUNK 4: Impute only on train data
+```{r}
+# Remove target and train/test identifier, remove missing values
+is_missing <- is.na(train$Age)
+model_predictors_train <- train[!is_missing, -c(6:7)]
+
+# Build regression model to predict age
+mod_impute <- lm(Age ~ ., data = model_predictors_train)
+
+train_imp <- train
+train_imp$Age[is_missing] <- round(predict(mod_impute, newdata = train_imp[is_missing, ]))
+```
+
+CHUNK 5: Fit model on train then impute and validate on test
+```{r}
+
+train_imp$set <- NULL
+# Fit model to training set
+mod2 <- glm(Chronic_Kidney_Disease ~ ., data = train_imp, family = binomial(link = "logit"))
+
+# Use imputation scheme from train set to impute values on test set
+test_missing <- is.na(test$Age)
+test_imp <- test
+test_imp$Age[test_missing] <- round(predict(mod_impute, newdata = test[test_missing, ]))
+
+# predict test data
+pred2 <- predict(mod2, newdata = test_imp, type = "response")
+```
+
+CHUNK 6: Compare the imputation methods
+```{r}
+library(pROC)
+
+# AUC for full imputation
+auc(roc(test$Chronic_Kidney_Disease, pred1))
+
+# AUC when using training imputation scheme on test data
+auc(roc(test$Chronic_Kidney_Disease, pred2))
+
+# Compare predictions visually
+plot(pred1, pred2, xlab = "Complete Imputation Predictions", ylab = "Imputation Scheme Predictions")
+
+# Compare predictions for records with imputed values only
+plot(pred1[test_missing], pred2[test_missing], xlab = "Complete Imputation Predictions", ylab = "Imputation Scheme Predictions")
+```
+
+CHUNK 7: Use mice package to build imputation on train only
+```{r}
+
+# Remove target and train/test identifier
+model_predictors <- ckd[, -c(6:7)]
+
+# Build imputation scheme on train only, but impute on full
+# The "ignore= " argument accomplishes this
+imp_partial <- mice(model_predictors, method = "norm.predict", m = 1, maxit = 1, ignore = c(ckd$set == "test"))
+ckd_imp_partial <- complete(imp_partial)
+
+# create correctly imputed train and test data set
+ckd_partial <- ckd
+ckd_partial$Age <- ckd_imp_partial$Age
+train_partial <- ckd_partial[ckd_partial$set == "train", ]
+test_partial <- ckd_partial[ckd_partial$set == "test", ]
+```
