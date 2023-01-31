@@ -1,0 +1,289 @@
+---
+title: "Fairness in Analytics" 
+
+---
+
+CHUNK 1: Fairness metrics example. Begin by loading the data, looking at some exploratory plots, running two models, and comparing results.
+```{r}
+# Load data
+
+dccc <- read.csv(file = "Data/dccc.csv", stringsAsFactors = TRUE)
+
+hist(dccc$AGE) # Looks reasonable, no outliers or oddities
+proportions(table(dccc$SEX, dccc$Default), margin = 1) # A bit higher proportions of males default
+boxplot(LIMIT_BAL ~ Default, data = dccc) # LIMIT_BAL does seem to vary by target variable of Default 
+plot(dccc$BILL_AMT1, dccc$BILL_AMT2) # High correlation between consecutive billing amounts is to be expected. A few negative points, which aren't necessarily errors; could be a refund issued.
+plot(dccc$PAY_AMT1, dccc$PAY_AMT2) # A few very large values here. Note that the currency is the New Taiwan Dollar (NTD), so these amounts aren't unreasonable.
+
+# Fit "full" and "unawareness" models
+
+DefAll <- glm(Default ~ LIMIT_BAL + SEX + AGE + BILL_AMT1 + BILL_AMT2 + PAY_AMT1 + PAY_AMT2, family = binomial(link = logit), data = dccc) # "full" model
+DefNoSex <- glm(Default ~ LIMIT_BAL + AGE + BILL_AMT1 + BILL_AMT2 + PAY_AMT1 + PAY_AMT2, family = binomial(link = logit), data = dccc) # unawareness (of SEX) model
+
+# May get warnings about fitted probabilities being very close to 0 or 1; these can be ignored.
+
+# Look at means of fitted values by sex
+
+print("Means for M and F from DefAll")
+mean(DefAll$fitted.values[dccc$SEX == "M"])
+mean(DefAll$fitted.values[dccc$SEX == "F"])
+print("Means for M and F from DefNoSex")
+mean(DefNoSex$fitted.values[dccc$SEX == "M"])
+mean(DefNoSex$fitted.values[dccc$SEX == "F"])
+```
+
+CHUNK 2: Demographic parity for unawareness model
+```{r}
+proportions(table(intervene = DefNoSex$fitted.values > 0.25, sex = dccc$SEX), margin = 2)
+```
+
+CHUNK 3: Predictive parity for unawareness model
+```{r}
+print("Males")
+proportions(table(intervene = as.numeric(DefNoSex$fitted.values[dccc$SEX == "M"] > 0.25), default = dccc$Default[dccc$SEX == "M"]), margin = 1)
+print("Females")
+proportions(table(intervene = as.numeric(DefNoSex$fitted.values[dccc$SEX == "F"] > 0.25), default = dccc$Default[dccc$SEX == "F"]), margin = 1)
+```
+
+CHUNKS 4-9 reproduce the analysis from Frees and Huang. It has been edited and simplified to produce only those values needed for the exercise that follows.
+
+CHUNK 4: Read in the data, make modifications, and summarize
+```{r}
+# The data is from resources for the text Computational Actuarial Science with R, edited by Arthur Charpentier. It is used here with the author's permission. They can be found in the package CASdatasets (cas.uqam.ca).
+
+auto <- read.csv(file = "Data/proxy.csv", stringsAsFactors = TRUE)
+auto$Female <- 1 * (auto$Gender == "Female") # Recode Gender to numeric
+auto$DrivAge <- relevel(auto$DrivAge, ref = "youngest people") # To match the output in the paper.
+ClaimsData <- subset(auto, ClaimAmount > 0) # Model only policies with claims
+summary( ClaimsData)
+```
+
+CHUNK 5: Fit Mod1, the gamma regression Model using all variables
+```{r}
+AmtGamma1 <- glm(ClaimAmount ~ VehValue + DrivAge + Female, family = Gamma(link = log), data = ClaimsData)
+summary(AmtGamma1)
+Mod1Fits <- AmtGamma1$fitted.values # Store the predictions for later use
+```
+
+CHUNK 6: Verify that the output from the model matches that for Model 1 in the paper.
+```{r}
+boxplot(Mod1Fits ~ ClaimsData$Female, ylab = "Fitted Value", xlab = "Female")
+```
+
+CHUNK 7: Fit Mod2, the gamma regression model using only acceptable variables and plot distribution of fits by Gender
+```{r}
+AmtGamma2 <- glm(ClaimAmount ~ VehValue + DrivAge, family = Gamma(link = log), data = ClaimsData)
+summary(AmtGamma2)
+Mod2Fits <- AmtGamma2$fitted.values # Store the predictions for later use
+
+# Adjust the predictions so that the sum of fitted values matches the sum of the Model 1 fitted values.
+SumM1Fits <- sum(AmtGamma1$fitted.values) 
+Mod2Fits <-(Mod2Fits/sum(Mod2Fits) ) * SumM1Fits 
+
+boxplot(Mod2Fits ~ ClaimsData$Female, ylab = "Fitted Value", xlab = "Female")
+
+```
+
+CHUNK 8: Fit Mod3, the gamma regression model using transformed acceptable variables and plot the distribution of fits by Gender. There was a minor error in the code that accompanied the paper. The numbers produced here are slightly different.
+```{r}
+# The following is a clever approach to obtaining the transformed variables. You are not responsible for understanding how this accomplishes the formulation in the paper.
+RemFem <- function(Var) {
+  lm(Var ~ Female, data = ClaimsData)$residual
+}
+
+ClaimsData2 <- ClaimsData[ , c('ClaimAmount', 'Female')]
+ClaimsData2$VehValueFemale <- RemFem(ClaimsData$VehValue)
+ClaimsData2$DrivAge1Female <- RemFem(1 * (ClaimsData$DrivAge == "old people"))
+ClaimsData2$DrivAge2Female <- RemFem(1 * (ClaimsData$DrivAge == "older work. people"))
+ClaimsData2$DrivAge3Female <- RemFem(1 * (ClaimsData$DrivAge == "oldest people"))
+ClaimsData2$DrivAge4Female <- RemFem(1 * (ClaimsData$DrivAge == "working people"))
+ClaimsData2$DrivAge5Female <- RemFem(1 * (ClaimsData$DrivAge == "young people"))
+ClaimsData2$DrivAge6Female <- RemFem(1 * (ClaimsData$DrivAge == "youngest people"))
+
+AmtGamma3 <- glm(ClaimAmount ~ VehValueFemale + DrivAge1Female + DrivAge2Female + DrivAge3Female + DrivAge4Female + DrivAge5Female, family = Gamma(link = log), data = ClaimsData2)
+summary(AmtGamma3)
+Mod3Fits <- AmtGamma3$fitted.values # Store the predictions for later use
+
+# Adjust the predictions so that the sum of fitted values matches the sum of the Model 1 fitted values.
+Mod3Fits <-( Mod3Fits/sum(Mod3Fits) ) * SumM1Fits 
+
+boxplot(Mod3Fits ~ ClaimsData2$Female, ylab = "Fitted Value", xlab = "Female")
+```
+
+CHUNK 9: Fit Mod6, using the Pope-Sydnor approach
+```{r}
+# Create a new data frame where values of the protected variable are replaced by their average
+
+ClaimsData3 <- ClaimsData
+ClaimsData3$Female <- mean(ClaimsData$Female)
+
+# Make predictions using these data and the original model using all variables.
+
+Mod6Fits <- predict(AmtGamma1, newdata = ClaimsData3, type = "response") # Store the predictions for later use
+
+# Adjust the predictions so that the sum of fitted values matches the sum of the Model 1 fitted values.
+Mod6Fits <-( Mod6Fits/sum(Mod6Fits) ) * SumM1Fits 
+
+boxplot(Mod6Fits ~ ClaimsData$Female, ylab = "Fitted Value", xlab = "Female")
+
+```
+
+CHUNK 10: Exercise 3.7.1: Evaluate the various models for demographic and predictive parity.
+
+CHUNK 10 provides space for your work. Be sure to run CHUNKS 4-9 first to get the fitted values for each model. A few calculations that might prove helpful are provided.
+
+```{r}
+# Mean claims for Model 1 predictions given the value of Female
+
+mean(Mod1Fits[ClaimsData$Female == 1])
+mean(Mod1Fits[ClaimsData$Female == 0])
+
+# Mean actual claims given the value of Female
+mean(ClaimsData$ClaimAmount[ClaimsData$Female == 1])
+mean(ClaimsData$ClaimAmount[ClaimsData$Female == 0])
+
+```
+
+CHUNK 11: Exercise 3.7.1: Solution
+```{r}
+# Demographic parity compares the predicted means conditional on Female = 1 or 0
+print("Demographic parity")
+Mean1 <- mean(Mod1Fits[ClaimsData$Female == 1])
+Mean0 <- mean(Mod1Fits[ClaimsData$Female == 0])
+Mean1
+Mean0
+Mean1 - Mean0
+
+Mean1 <- mean(Mod2Fits[ClaimsData$Female == 1])
+Mean0 <- mean(Mod2Fits[ClaimsData$Female == 0])
+Mean1
+Mean0
+Mean1 - Mean0
+
+Mean1 <- mean(Mod3Fits[ClaimsData$Female == 1])
+Mean0 <- mean(Mod3Fits[ClaimsData$Female == 0])
+Mean1
+Mean0
+Mean1 - Mean0
+
+Mean1 <- mean(Mod6Fits[ClaimsData$Female == 1])
+Mean0 <- mean(Mod6Fits[ClaimsData$Female == 0])
+Mean1
+Mean0
+Mean1 - Mean0
+
+# Predictive parity compares the bias conditional on Female = 1 or 0
+print("Predictive parity")
+
+ObsMean1 <- mean(ClaimsData$ClaimAmount[ClaimsData$Female == 1])
+ObsMean0 <- mean(ClaimsData$ClaimAmount[ClaimsData$Female == 0])
+
+Bias1 <- ObsMean1 - mean(Mod1Fits[ClaimsData$Female == 1])
+Bias0 <- ObsMean0 - mean(Mod1Fits[ClaimsData$Female == 0])
+Bias1
+Bias0
+Bias1 - Bias0
+
+Bias1 <- ObsMean1 - mean(Mod2Fits[ClaimsData$Female == 1])
+Bias0 <- ObsMean0 - mean(Mod2Fits[ClaimsData$Female == 0])
+Bias1
+Bias0
+Bias1 - Bias0
+
+Bias1 <- ObsMean1 - mean(Mod3Fits[ClaimsData$Female == 1])
+Bias0 <- ObsMean0 - mean(Mod3Fits[ClaimsData$Female == 0])
+Bias1
+Bias0
+Bias1 - Bias0
+
+Bias1 <- ObsMean1 - mean(Mod6Fits[ClaimsData$Female == 1])
+Bias0 <- ObsMean0 - mean(Mod6Fits[ClaimsData$Female == 0])
+Bias1
+Bias0
+Bias1 - Bias0
+
+```
+
+CHUNK 12: Exercise 3.7.2: Evaluate Models 3 and 6 for the credit card data.
+
+This CHUNK clears the environment and repeats the code from CHUNKs 1-3 to fit two regression models to the credit card data but using the reduced set of variables.
+
+```{r}
+# Clear the environment
+rm(list = ls())
+
+# Load data
+
+dccc <- read.csv(file = "Data/dccc.csv")
+
+# To use Pope-Sydnor, SEX must be converted to 0-1
+
+dccc$SEX <- ifelse(dccc$SEX == "F", 1, 0)
+
+# Fit "full" and "unawareness" models
+
+DefAll <- glm(Default ~ LIMIT_BAL + SEX + BILL_AMT1 + PAY_AMT1, family = binomial(link = logit), data = dccc) # "full" model
+DefNoSex <- glm(Default ~ LIMIT_BAL + BILL_AMT1 + PAY_AMT1, family = binomial(link = logit), data = dccc) # unawareness (of SEX) model
+
+# Demographic parity
+
+proportions(table(intervene = DefNoSex$fitted.values > 0.25, sex = dccc$SEX), margin = 2)
+
+# Predictive parity
+
+proportions(table(intervene = as.numeric(DefNoSex$fitted.values[dccc$SEX == 0] > 0.25), default = dccc$Default[dccc$SEX == 0]), margin = 1) # male
+proportions(table(intervene = as.numeric(DefNoSex$fitted.values[dccc$SEX == 1] > 0.25), default = dccc$Default[dccc$SEX == 1]), margin = 1) # female
+```
+
+CHUNK 13: Complete Exercise 3.7.2
+```{r}
+# CHUNK 13
+
+```
+
+CHUNK 14: Exercise 3.7.2: Solution
+```{r}
+# Create the orthogonal variables.
+
+RemSex <- function(Var) {
+  lm(Var ~ SEX, data = dccc)$residual
+}
+
+# New data frame with the variables added
+dccc2 <- dccc
+dccc2$LIMIT_BAL_F <- RemSex(dccc2$LIMIT_BAL)
+dccc2$BILL_AMT1_F <- RemSex(dccc2$BILL_AMT1)
+dccc2$PAY_AMT1_F <- RemSex(dccc2$PAY_AMT1)
+DefOrtho <- glm(Default ~ LIMIT_BAL_F + BILL_AMT1_F + PAY_AMT1_F, family = binomial(link = logit), data = dccc2)
+
+print("Model 3 - Orthogonal")
+# Check demographic parity
+
+proportions(table(intervene = DefOrtho$fitted.values > 0.25, sex = dccc2$SEX), margin = 2) # orthogonal model
+
+# Check predictive parity
+
+proportions(table(intervene = as.numeric(DefOrtho$fitted.values[dccc2$SEX == 0] > 0.25), default = dccc$Default[dccc$SEX == 0]), margin = 1) # male
+proportions(table(intervene = as.numeric(DefOrtho$fitted.values[dccc2$SEX == 1] > 0.25), default = dccc$Default[dccc$SEX == 1]), margin = 1) # female
+
+# Pope-Sydnor
+# Create a new data frame where values of the protected variable are replaced by their average
+
+dccc3 <- dccc
+dccc3$SEX <- mean(dccc$SEX)
+
+# Make predictions using these data and the original model using all variables.
+
+Mod6Fits <- predict(DefAll, newdata = dccc3, type = "response")
+
+print("Model 6 - Pope-Sydnor")
+# Check demographic parity
+
+proportions(table(intervene = Mod6Fits > 0.25, sex = dccc$SEX), margin = 2) # P-S model
+
+# Check predictive parity
+
+proportions(table(intervene = as.numeric(Mod6Fits[dccc$SEX == 0] > 0.25), default = dccc$Default[dccc$SEX == 0]), margin = 1) # male
+proportions(table(intervene = as.numeric(Mod6Fits[dccc$SEX == 1] > 0.25), default = dccc$Default[dccc$SEX == 1]), margin = 1) # female
+```
+
